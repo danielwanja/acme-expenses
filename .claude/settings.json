@@ -1,8 +1,16 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": ["Bash(npm run *)", "Bash(git commit *)"],
-    "ask": ["mcp__firebase"],
-    "deny": ["Bash(git push *)", "Read(./.env)", "Read(./.env.*)"]
+    "allow": [
+      "Bash(npm test *)", "Bash(npm run typecheck)", "Bash(npm run lint)",
+      "Bash(npm run test:emu)", "Bash(npm run test:e2e)",
+      "Bash(git status *)", "Bash(git diff *)", "Bash(git commit *)"
+    ],
+    "ask": ["Bash(git push *)", "Bash(npm install *)", "mcp__firebase"],
+    "deny": [
+      "Read(./.env)", "Read(./.env.*)", "Read(./apps/api/.secret.local)",
+      "Bash(firebase deploy *)", "mcp__firebase__firebase_deploy"
+    ]
   },
   "hooks": {
     "Stop": [{
@@ -14,8 +22,20 @@
       "matcher": "Edit|Write",
       "hooks": [{
         "type": "command",
+        "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh",
+        "onFailure": "block"
+      }]
+    }, {
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
         "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lock-tests.sh"
       }]
     }]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false
   }
 }
