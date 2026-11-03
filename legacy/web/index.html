@@ -1,0 +1,50 @@
+<!doctype html>
+<html ng-app="acme">
+<head>
+  <meta charset="utf-8">
+  <title>Acme Expenses (legacy)</title>
+  <style>
+    body { font-family: Verdana, sans-serif; font-size: 13px; margin: 0; }
+    header { background: #2b4a6f; color: #fff; padding: 8px 16px; }
+    header a { color: #fff; margin-right: 12px; }
+    main { padding: 16px; }
+    table { border-collapse: collapse; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+    .error { color: #b00; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular-route.min.js"></script>
+  <script src="app/app.js"></script>
+  <script src="app/services/api.js"></script>
+  <script src="app/expenses/list/ExpenseListCtrl.js"></script>
+  <script src="app/expenses/edit/ExpenseEditCtrl.js"></script>
+  <script src="app/expenses/submit/SubmitCtrl.js"></script>
+  <script src="app/approvals/ApprovalQueueCtrl.js"></script>
+  <script src="app/export/ExportCtrl.js"></script>
+  <script src="app/filters/money.filter.js"></script>
+  <script src="app/filters/status.filter.js"></script>
+  <script src="app/filters/shortDate.filter.js"></script>
+  <script src="app/filters/category.filter.js"></script>
+  <script src="app/filters/initials.filter.js"></script>
+  <script src="app/filters/truncate.filter.js"></script>
+  <script src="app/filters/yesNo.filter.js"></script>
+  <script src="app/filters/currencySymbol.filter.js"></script>
+  <script src="app/filters/pluralize.filter.js"></script>
+  <script src="app/filters/receiptBadge.filter.js"></script>
+  <script src="app/filters/reason.filter.js"></script>
+  <script src="app/filters/monthLabel.filter.js"></script>
+</head>
+<body ng-controller="ShellCtrl as shell">
+  <header>
+    <strong>Acme Expenses</strong>
+    <a href="#!/expenses">My expenses</a>
+    <a href="#!/expenses/new">New expense</a>
+    <a href="#!/approvals">Approvals</a>
+    <a href="#!/export">Export</a>
+    <!-- The corporate proxy set X-Legacy-User. Locally, pick a user. -->
+    <select ng-model="shell.user" ng-change="shell.switchUser()"
+            ng-options="u for u in shell.users"></select>
+  </header>
+  <main ng-view></main>
+</body>
+</html>

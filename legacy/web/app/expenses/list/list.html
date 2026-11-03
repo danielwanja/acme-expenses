@@ -1,0 +1,19 @@
+<h1>My expenses</h1>
+<p ng-if="vm.loading">Loading…</p>
+<p class="error" ng-if="vm.error">{{vm.error}}</p>
+<p ng-if="!vm.loading && !vm.error && !vm.expenses.length">No expenses yet.</p>
+<table ng-if="vm.expenses.length">
+  <tr><th>Date</th><th>Category</th><th>Amount</th><th>Status</th><th>Receipt</th><th></th></tr>
+  <tr ng-repeat="e in vm.expenses">
+    <td>{{e.expense_date | shortDate}}</td>
+    <td>{{e.category | category}}</td>
+    <td>{{e.amount | money:e.currency}}</td>
+    <td>{{e.status | status}} <small ng-if="e.rejection_reason">({{e.rejection_reason | reason}})</small></td>
+    <td>{{e.receipt_path | receiptBadge}}</td>
+    <td>
+      <a ng-if="e.status == '0' || e.status == '3'" href="#!/expenses/{{e.id}}/edit">Edit</a>
+      <a ng-if="e.status == '0'" href="#!/expenses/{{e.id}}/submit">Submit</a>
+    </td>
+  </tr>
+</table>
+<p>{{vm.expenses.length | pluralize:'expense'}}</p>

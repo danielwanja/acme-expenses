@@ -17,9 +17,11 @@
     "openapi": "npm run openapi -w @acme/shared",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "test": "vitest run --project shared --project api --project web --project mcp",
+    "test": "vitest run --project shared --project api --project web --project migration --project mcp",
     "test:emu": "firebase emulators:exec --only auth,firestore --project demo-acme \"vitest run --project api-emu && vitest run --project rules\"",
-    "test:e2e": "npm run test:e2e -w @acme/web --if-present"
+    "test:e2e": "npm run test:e2e -w @acme/web --if-present",
+    "test:parity": "firebase emulators:exec --only firestore --project demo-acme \"vitest run --project parity\"",
+    "legacy": "php -S 127.0.0.1:8081 -t legacy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

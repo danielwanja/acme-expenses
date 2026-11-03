@@ -49,6 +49,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: "migration",
+          root: "migration",
+          include: ["**/*.test.ts"],
+        },
+      },
+      {
+        test: {
           name: "mcp",
           root: "tools/approvals-mcp",
           include: ["*.test.ts"],
@@ -59,6 +66,13 @@ export default defineConfig({
           name: "rules",
           include: ["tests/rules/**/*.test.ts"],
           fileParallelism: false,
+        },
+      },
+      {
+        // Needs the legacy app and the emulators: npm run test:parity
+        test: {
+          name: "parity",
+          include: ["tests/parity/**/*.test.ts"],
         },
       },
     ],

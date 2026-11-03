@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       "**/node_modules/**", "**/dist/**", "**/lib/**",
       "**/*.d.ts", "playwright-report/**", "test-results/**",
+      "legacy/**", // the old AngularJS + PHP app: read-only, not linted
     ],
   },
   js.configs.recommended,

@@ -1,0 +1,50 @@
+<h1>Approvals</h1>
+
+<!--
+  Expenses from your team that wait for you, oldest first.
+  Foreign amounts are converted when you approve, at the month's rate.
+  Rejections need a reason; the employee sees it on their list.
+-->
+
+<p ng-if="vm.loading">Loading…</p>
+<p class="error" ng-if="vm.error">{{vm.error}}</p>
+<p ng-if="!vm.loading && !vm.error && !vm.items.length">
+  Nothing is waiting for you.
+</p>
+
+<p ng-if="vm.items.length">
+  {{vm.items.length | pluralize:'expense'}} waiting.
+</p>
+
+<table ng-if="vm.items.length">
+  <tr>
+    <th></th>
+    <th>Employee</th>
+    <th>Date</th>
+    <th>Category</th>
+    <th>Amount</th>
+    <th>Note</th>
+    <th>Receipt</th>
+    <th></th>
+  </tr>
+  <tr ng-repeat="e in vm.items">
+    <td title="{{e.owner_name}}">{{e.owner_name | initials}}</td>
+    <td>{{e.owner_name}}</td>
+    <td>{{e.expense_date | shortDate}}</td>
+    <td>{{e.category | category}}</td>
+    <td>{{e.amount | money:e.currency}}</td>
+    <td>{{e.note | truncate:40}}</td>
+    <td>{{e.receipt_path | receiptBadge}}</td>
+    <td>
+      <!-- Managers can't approve their own expenses. -->
+      <span ng-if="e.owner_id == vm.me">Your expense</span>
+      <button type="button" ng-if="e.owner_id != vm.me" ng-click="vm.approve(e)">Approve</button>
+      <button type="button" ng-if="e.owner_id != vm.me && vm.rejecting != e.id"
+              ng-click="vm.rejecting = e.id">Reject</button>
+      <span ng-if="vm.rejecting == e.id">
+        <input ng-model="e.reason" placeholder="Reason">
+        <button type="button" ng-click="vm.reject(e, e.reason)">Reject expense</button>
+      </span>
+    </td>
+  </tr>
+</table>

@@ -4,6 +4,7 @@
     "vitest.config.ts",
     "eslint.config.js",
     "tests/**/*.ts",
+    "migration/**/*.ts",
     "scripts/**/*.ts"
   ]
 }

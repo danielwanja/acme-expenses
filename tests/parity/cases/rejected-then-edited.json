@@ -1,0 +1,11 @@
+{
+  "name": "H5 rejected-then-edited resets to draft",
+  "request": { "endpoint": "expense.php", "id": 1042, "as": "erin" },
+  "recorded": {
+    "id": 1042,
+    "amount": "1,234.50",
+    "currency": "USD",
+    "status": "0",
+    "expense_date": "2026-03-01 00:00:00"
+  }
+}

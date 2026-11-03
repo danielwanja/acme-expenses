@@ -1,0 +1,32 @@
+<h1>{{vm.form.id ? 'Edit expense ' + vm.form.id : 'New expense'}}</h1>
+<p ng-if="vm.status == '3'">Rejected: {{vm.rejection | reason}}. Saving puts it back in your drafts.</p>
+<p class="error" ng-if="vm.error">{{vm.error}}</p>
+<form ng-submit="vm.save()">
+  <p>
+    <label>Amount <input ng-model="vm.form.amount" placeholder="42.50"></label>
+    <span class="error">{{vm.fields.amount}}</span>
+  </p>
+  <p>
+    <label>Currency
+      <select ng-model="vm.form.currency" ng-options="c for c in vm.currencies"></select>
+    </label>
+    {{vm.form.currency | currencySymbol}}
+  </p>
+  <p>
+    <label>Category
+      <select ng-model="vm.form.category"
+              ng-options="c as (c | category) for c in vm.categories"></select>
+    </label>
+    <span class="error">{{vm.fields.category}}</span>
+  </p>
+  <p>
+    <label>Date <input type="text" ng-model="vm.form.expense_date" placeholder="2026-03-01"></label>
+    <span class="error">{{vm.fields.expense_date}}</span>
+  </p>
+  <p>
+    <label>Note <textarea ng-model="vm.form.note"></textarea></label>
+    <span class="error">{{vm.fields.note}}</span>
+  </p>
+  <button type="submit">Save</button>
+  <a href="#!/expenses">Cancel</a>
+</form>

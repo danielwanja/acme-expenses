@@ -1,0 +1,6 @@
+<h1>Export</h1>
+<p>Download approved expenses for the accounting system, then mark them exported.</p>
+<p><a href="../api/export.php" download>Download CSV</a> (sends your user header only in the old proxy setup)</p>
+<button type="button" ng-click="vm.markExported()">Mark approved as exported</button>
+<p ng-if="vm.done !== undefined">{{vm.done | pluralize:'expense'}} exported.</p>
+<p class="error" ng-if="vm.error">{{vm.error}}</p>

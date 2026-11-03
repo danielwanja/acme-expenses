@@ -11,7 +11,8 @@
     "ask": ["Bash(git push *)", "Bash(npm install *)", "mcp__firebase"],
     "deny": [
       "Read(./.env)", "Read(./.env.*)", "Read(./apps/api/.secret.local)",
-      "Bash(firebase deploy *)", "mcp__firebase__firebase_deploy"
+      "Bash(firebase deploy *)", "mcp__firebase__firebase_deploy",
+      "Edit(/legacy/**)"
     ]
   },
   "hooks": {

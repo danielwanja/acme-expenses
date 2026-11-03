@@ -1,0 +1,8 @@
+<h1>Submit expense {{vm.expense.id}}</h1>
+<p>{{vm.expense.amount | money:vm.expense.currency}} on {{vm.expense.expense_date | shortDate}}</p>
+<p ng-if="vm.estimate !== null && vm.expense.currency != 'USD'">
+  About {{vm.estimate | number:2}} USD at the {{vm.month | monthLabel}} rate.
+</p>
+<p class="error" ng-if="vm.error">{{vm.error}}</p>
+<button type="button" ng-click="vm.submit()">Submit to my manager</button>
+<a href="#!/expenses">Cancel</a>

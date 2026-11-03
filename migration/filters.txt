@@ -1,0 +1,12 @@
+legacy/web/app/filters/category.filter.js
+legacy/web/app/filters/currencySymbol.filter.js
+legacy/web/app/filters/initials.filter.js
+legacy/web/app/filters/money.filter.js
+legacy/web/app/filters/monthLabel.filter.js
+legacy/web/app/filters/pluralize.filter.js
+legacy/web/app/filters/reason.filter.js
+legacy/web/app/filters/receiptBadge.filter.js
+legacy/web/app/filters/shortDate.filter.js
+legacy/web/app/filters/status.filter.js
+legacy/web/app/filters/truncate.filter.js
+legacy/web/app/filters/yesNo.filter.js
