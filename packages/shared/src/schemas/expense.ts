@@ -39,6 +39,9 @@ export const Expense = NewExpense.extend({
   baseCurrency: z.literal("USD").optional(),
   fxRate: z.number().positive().optional(), // USD per one unit of currency
   fxRateDate: CalendarDate.optional(), // the provider's date for the rate
+  approvedBy: z.string().optional(), // "auto" for the up-to-$75 tier
+  approvedAt: z.unknown().optional(), // Firestore server timestamp
+  spotCheck: z.boolean().optional(), // auto-approved and sampled for review
 });
 export type Expense = z.infer<typeof Expense>;
 
@@ -56,7 +59,11 @@ export type UpdateExpenseRequest = z.infer<typeof UpdateExpenseRequest>;
 export const SubmitResult = z
   .object({
     expenseId: z.string(),
-    status: z.literal("submitted"),
+    status: z.enum(["submitted", "approved"]).openapi({
+      description: "approved when the expense is approved automatically (up to $75)",
+    }),
+    approvedBy: z.literal("auto").optional()
+      .openapi({ description: "Present when the expense was approved automatically" }),
     amountBase: MinorUnits.openapi({ description: "USD cents" }),
     baseCurrency: z.literal("USD"),
     fxRate: z.number().positive(),

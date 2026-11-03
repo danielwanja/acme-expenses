@@ -9,6 +9,8 @@ const LABELS: Record<Status, string> = {
   exported: "Exported",
 };
 
-export function StatusBadge({ status }: { status: Status }) {
-  return <span className={`badge badge-${status}`}>{LABELS[status]}</span>;
+/** `auto`: approved at submission because it was up to $75 (approvedBy "auto"). */
+export function StatusBadge({ status, auto = false }: { status: Status; auto?: boolean }) {
+  const label = status === "approved" && auto ? "Approved automatically" : LABELS[status];
+  return <span className={`badge badge-${status}`}>{label}</span>;
 }

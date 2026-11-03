@@ -17,7 +17,7 @@ service cloud.firestore {
 
     match /expenses/{id} {
       // An employee creates their own draft. Server-owned fields
-      // (amountBase, fxRate, createdAt, approvals...) can't be sent.
+      // (amountBase, fxRate, approvedBy, spotCheck...) can't be sent.
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == "draft"

@@ -1,0 +1,3 @@
+.claude/locked-tests.txt
+.claude/hooks/
+.claude/settings

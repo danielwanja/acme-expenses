@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 // Files in apps/api/test that need the Firestore emulator (npm run test:emu).
 // Everything else in apps/api/test runs in plain npm test.
 const apiEmulatorTests = [
+  "test/approve.test.ts",
   "test/expenses.test.ts",
 ];
 
@@ -40,6 +41,13 @@ export default defineConfig({
           include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
           environment: "jsdom",
           setupFiles: ["src/test/setup.ts"],
+        },
+      },
+      {
+        test: {
+          name: "rules",
+          include: ["tests/rules/**/*.test.ts"],
+          fileParallelism: false,
         },
       },
     ],

@@ -1,5 +1,22 @@
 import type { DenyReason } from "../schemas/approval.js";
 import type { Expense } from "../schemas/expense.js";
+import { RECEIPT_REQUIRED_ABOVE_CENTS } from "./receipt";
+
+/**
+ * Up to $75 (amountBase, USD cents) is approved automatically at submission.
+ * Same constant as the receipt rule: an expense that needs no receipt needs no manager.
+ */
+export function isAutoApproved(amountBase: number): boolean {
+  return amountBase <= RECEIPT_REQUIRED_ABOVE_CENTS;
+}
+
+/** About 1 in 20 auto-approved expenses is flagged for the manager to review afterwards. */
+export const SPOT_CHECK_RATE = 1 / 20;
+
+/** `random` is a number in [0, 1), such as Math.random(); passed in so tests pick it. */
+export function isSpotChecked(random: number): boolean {
+  return random < SPOT_CHECK_RATE;
+}
 
 /** The person trying to approve, and the employees who report to them. */
 export type Approver = { uid: string; team: string[] };

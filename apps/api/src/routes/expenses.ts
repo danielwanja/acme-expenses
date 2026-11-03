@@ -1,6 +1,6 @@
 import {
-  canEdit, convertToUsd, DecisionResult, isReceiptRequired, ExpenseIdParams, RejectRequest,
-  SubmitResult, UpdateExpenseRequest, type Expense,
+  canEdit, convertToUsd, DecisionResult, isAutoApproved, isReceiptRequired, isSpotChecked,
+  ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest, type Expense,
 } from "@acme/shared";
 import { Router, type Request } from "express";
 import type { DecodedIdToken } from "firebase-admin/auth";
@@ -44,6 +44,12 @@ expenses.patch("/v1/expenses/:id", requireAuth, async (req, res) => {
   res.status(204).end();
 });
 
+// Where spot checks get their random number. Tests pass their own.
+let random: () => number = Math.random;
+export function configureSpotCheck(source: () => number = Math.random): void {
+  random = source;
+}
+
 expenses.post("/v1/expenses/:id/submit", requireAuth, async (req, res) => {
   const { id, ref, expense } = await ownDraft(req, userOf(req));
   if (expense.currency !== "USD") {
@@ -59,16 +65,25 @@ expenses.post("/v1/expenses/:id/submit", requireAuth, async (req, res) => {
       "Expenses over $75 need a receipt before they can be submitted.",
       "Attach a receipt image to the draft, then submit again.");
   }
+  // Up to $75 needs no manager: approved now, and about 1 in 20 is sampled for review.
+  const auto = isAutoApproved(amountBase);
+  const status = auto ? "approved" : "submitted";
   await ref.update({
-    status: "submitted",
+    status,
     amountBase,
     baseCurrency: "USD",
     fxRate,
     fxRateDate,
     submittedAt: FieldValue.serverTimestamp(),
+    ...(auto ? {
+      approvedBy: "auto",
+      approvedAt: FieldValue.serverTimestamp(),
+      spotCheck: isSpotChecked(random()),
+    } : {}),
   });
   res.json(SubmitResult.parse({
-    expenseId: id, status: "submitted", amountBase, baseCurrency: "USD", fxRate, fxRateDate,
+    expenseId: id, status, ...(auto ? { approvedBy: "auto" } : {}),
+    amountBase, baseCurrency: "USD", fxRate, fxRateDate,
   }));
 });
 

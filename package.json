@@ -17,13 +17,15 @@
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "vitest run --project shared --project api --project web",
-    "test:emu": "firebase emulators:exec --only auth,firestore --project demo-acme \"vitest run --project api-emu\"",
+    "test:emu": "firebase emulators:exec --only auth,firestore --project demo-acme \"vitest run --project api-emu && vitest run --project rules\"",
     "test:e2e": "npm run test:e2e -w @acme/web --if-present"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
+    "firebase": "^13.2.0",
     "firebase-tools": "^15.34.2",
     "globals": "^17.14.0",
     "tsx": "^4.23.15",

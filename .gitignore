@@ -23,3 +23,6 @@ apps/api/.env.local
 # Claude Code: personal files
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Claude Code worktrees (claude --worktree <name>)
+.claude/worktrees/

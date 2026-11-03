@@ -32,7 +32,7 @@ export function ExpenseList({ uid }: { uid: string }) {
                   {" "}at {e.fxRate} (rate of {e.fxRateDate})</small>
               )}
             </td>
-            <td><StatusBadge status={e.status} /></td>
+            <td><StatusBadge status={e.status} auto={e.approvedBy === "auto"} /></td>
           </tr>
         ))}
       </tbody>

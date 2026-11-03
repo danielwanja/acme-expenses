@@ -1,21 +1,27 @@
+// packages/shared/src/rules/approval.test.ts
 import { describe, expect, test } from "vitest";
-import { canApprove, checkApproval } from "./approval.js";
+import { canApprove, isAutoApproved } from "./approval.js";
 
-describe("checkApproval", () => {
-  const max = { uid: "max", team: ["erin"] };
-
-  test("a manager approves a submitted expense from their team", () => {
-    expect(checkApproval(max, { ownerId: "erin", status: "submitted" }))
-      .toEqual({ ok: true });
+describe("isAutoApproved (up to $75, the receipt line)", () => {
+  test.each([
+    { cents: 0, expected: true },
+    { cents: 7_499, expected: true },
+    { cents: 7_500, expected: true }, // exactly $75: no receipt, auto
+    { cents: 7_501, expected: false }, // receipt and a manager
+  ])("$cents cents -> $expected", ({ cents, expected }) => {
+    expect(isAutoApproved(cents)).toBe(expected);
   });
+});
 
-  test("nobody approves their own expense", () => {
-    expect(checkApproval({ uid: "erin", team: ["erin"] },
-      { ownerId: "erin", status: "submitted" }))
-      .toEqual({ ok: false, reason: "cannot_self_approve" });
-  });
-
-  test("only submitted expenses can be approved", () => {
-    expect(canApprove(max, { ownerId: "erin", status: "draft" })).toBe(false);
+describe("canApprove", () => {
+  test.each([
+    { who: "max", team: ["erin"], status: "submitted", ok: true },
+    { who: "erin", team: ["erin"], status: "submitted", ok: false },
+    { who: "max", team: [], status: "submitted", ok: false },
+    { who: "max", team: ["erin"], status: "draft", ok: false },
+    { who: "max", team: ["erin"], status: "approved", ok: false },
+  ] as const)("$who, $status -> $ok", ({ who, team, status, ok }) => {
+    const expense = { ownerId: "erin", status };
+    expect(canApprove({ uid: who, team: [...team] }, expense)).toBe(ok);
   });
 });

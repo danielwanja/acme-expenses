@@ -49,7 +49,8 @@ registry.registerPath({
   security: asPerson,
   request: { params: ExpenseIdParams },
   responses: {
-    200: json("Submitted, with the USD amount and the rate used", SubmitResult),
+    200: json("Submitted, or approved automatically up to $75, with the USD amount and rate",
+      SubmitResult),
     401: unauthorized,
     403: error("Not your expense (not_owner)"),
     404: error("No such expense (expense_not_found)"),

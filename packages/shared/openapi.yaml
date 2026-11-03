@@ -76,6 +76,13 @@ components:
           type: string
           enum:
             - submitted
+            - approved
+          description: approved when the expense is approved automatically (up to $75)
+        approvedBy:
+          type: string
+          enum:
+            - auto
+          description: Present when the expense was approved automatically
         amountBase:
           type: integer
           minimum: 0
@@ -192,7 +199,8 @@ paths:
           in: path
       responses:
         "200":
-          description: Submitted, with the USD amount and the rate used
+          description: Submitted, or approved automatically up to $75, with the USD amount
+            and rate
           content:
             application/json:
               schema:

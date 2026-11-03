@@ -2,6 +2,7 @@
 - npm test                 # unit tests (Vitest), all workspaces
 - npx vitest run <file>    # one test file
 - npm run test:emu         # API + rules tests inside the emulators
+- npm run test:e2e         # Playwright end-to-end tests
 - npm run typecheck
 - npm run lint
 

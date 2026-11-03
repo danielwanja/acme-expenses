@@ -3,5 +3,19 @@
     "allow": ["Bash(npm run *)", "Bash(git commit *)"],
     "ask": ["mcp__firebase"],
     "deny": ["Bash(git push *)", "Read(./.env)", "Read(./.env.*)"]
+  },
+  "hooks": {
+    "Stop": [{
+      "hooks": [
+        { "type": "command", "command": "npm test --silent 1>&2 || exit 2" }
+      ]
+    }],
+    "PreToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lock-tests.sh"
+      }]
+    }]
   }
 }
