@@ -16,6 +16,12 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "max-len": ["error", { code: 100, ignoreUrls: true }],
+      // House libraries (CLAUDE.md): one HTTP client, configured once.
+      "no-restricted-imports": ["error", {
+        paths: ["axios", "got", "node-fetch"].map((name) => ({
+          name, message: "Use ky (CLAUDE.md, House libraries).",
+        })),
+      }],
     },
   },
 );

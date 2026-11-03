@@ -1,0 +1,38 @@
+# docs/fx-api/openapi.yaml (excerpt)
+# Source: provider spec v2.4, fetched 2026-10-28
+# Only the operations Acme uses. "The rates provider" is fictional; replace
+# this file with your real provider's spec and regenerate the types:
+#   npm run gen:fx-types -w @acme/api
+openapi: 3.1.0
+info: { title: Rates provider (excerpt used by Acme), version: "2.4" }
+servers:
+  - url: https://api.rates.example/v2
+security:
+  - apiKey: []
+paths:
+  /rates/{date}:
+    get:
+      operationId: getRatesForDate
+      parameters:
+        - { name: date, in: path, required: true,
+            schema: { type: string, format: date } }
+        - { name: base, in: query, required: true,
+            schema: { type: string } }
+      responses:
+        "200":
+          description: Daily rates for the base currency
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RatesResponse" }
+        "429": { description: Rate limited. See Retry-After. }
+components:
+  securitySchemes:
+    apiKey: { type: apiKey, in: header, name: X-Api-Key }
+  schemas:
+    RatesResponse:
+      type: object
+      required: [base, date, rates]
+      properties:
+        base: { type: string }
+        date: { type: string, format: date }
+        rates: { type: object, additionalProperties: { type: number } }

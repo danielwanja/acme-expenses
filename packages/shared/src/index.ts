@@ -3,6 +3,7 @@ export * from "./schemas/api-error.js";
 export * from "./schemas/approval.js";
 export * from "./schemas/bulk-approve.js";
 export * from "./schemas/expense.js";
+export * from "./schemas/fx.js";
 export * from "./schemas/money.js";
 export * from "./schemas/pending.js";
 export * from "./rules/approval.js";

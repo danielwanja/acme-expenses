@@ -150,6 +150,32 @@ components:
         - baseCurrency
         - fxRate
         - fxRateDate
+    FxRate:
+      type: object
+      properties:
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          description: ISO 4217 code
+          example: EUR
+        base:
+          type: string
+          enum:
+            - USD
+        date:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          example: 2026-10-14
+          description: The provider's date for the rate
+        rate:
+          type: number
+          exclusiveMinimum: 0
+          description: USD per one unit of currency
+      required:
+        - currency
+        - base
+        - date
+        - rate
     DecisionResult:
       type: object
       properties:
@@ -362,8 +388,77 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: "Can't be submitted as it is: receipt_required (over $75 in USD and
-            no receipt) or unsupported_currency"
+          description: Over $75 in USD and no receipt (receipt_required)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: The rates provider refused our request (fx_unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: No exchange rate available right now (fx_unavailable). The draft is
+            unchanged; retry in a few minutes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/fx/rate:
+    get:
+      operationId: getFxRate
+      summary: The USD rate for a currency and day, for previews
+      description: What submit would use for that day. Convert with the shared rule to
+        preview; submit converts again on the server.
+      security: *a1
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[A-Z]{3}$
+            description: ISO 4217 code
+            example: EUR
+          required: true
+          description: ISO 4217 code
+          name: currency
+          in: query
+        - schema:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+            example: 2026-10-14
+            description: The day of the rate
+          required: true
+          description: The day of the rate
+          name: date
+          in: query
+      responses:
+        "200":
+          description: USD per one unit of currency, with the provider's date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FxRate"
+        "400":
+          description: Invalid query (invalid_query)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: The rates provider refused our request (fx_unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: No exchange rate available right now (fx_unavailable)
           content:
             application/json:
               schema:

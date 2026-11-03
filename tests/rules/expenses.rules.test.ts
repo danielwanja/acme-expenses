@@ -184,4 +184,18 @@ describe("server-only data", () => {
     await assertSucceeds(getDoc(doc(erin, "users/erin")));
     await assertFails(updateDoc(doc(erin, "users/erin"), { role: "manager" }));
   });
+
+  test("cached exchange rates are only for the Admin SDK", async () => {
+    await seed("fxRates/2026-10-30_EUR",
+      { base: "EUR", date: "2026-10-30", rates: { USD: 1.0842 } });
+    const erin = testEnv.authenticatedContext("erin").firestore();
+    const max = testEnv.authenticatedContext("max", { role: "manager" }).firestore();
+    await assertFails(getDoc(doc(erin, "fxRates/2026-10-30_EUR")));
+    await assertFails(getDoc(doc(max, "fxRates/2026-10-30_EUR")));
+    // A client that could write here would set everyone's exchange rate.
+    await assertFails(setDoc(doc(erin, "fxRates/2026-11-02_EUR"),
+      { base: "EUR", date: "2026-11-02", rates: { USD: 9 } }));
+    await assertFails(updateDoc(doc(max, "fxRates/2026-10-30_EUR"),
+      { rates: { USD: 9 } }));
+  });
 });

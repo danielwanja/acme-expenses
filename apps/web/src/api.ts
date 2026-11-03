@@ -1,6 +1,7 @@
 // Calls to Acme's own API. Every response is parsed with the shared schema.
 import {
-  BulkApproveResponse, DecisionResult, PendingPage, SubmitResult, type PendingQuery,
+  BulkApproveResponse, DecisionResult, FxRate, PendingPage, SubmitResult,
+  type FxRateQuery, type PendingQuery,
 } from "@acme/shared";
 import { http } from "./http";
 
@@ -15,6 +16,9 @@ export const approveExpense = (id: string) =>
 export const rejectExpense = (id: string, reason: string) =>
   http.post(`v1/expenses/${id}/reject`, { json: { reason } })
     .json(DecisionResult);
+
+export const getFxRate = (query: FxRateQuery, signal?: AbortSignal) =>
+  http.get("v1/fx/rate", { searchParams: query, signal }).json(FxRate);
 
 export const listPending = (
   query: Partial<PendingQuery> = {}, signal?: AbortSignal,

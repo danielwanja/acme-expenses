@@ -6,6 +6,7 @@ import { BulkApproveRequest, BulkApproveResponse } from "../schemas/bulk-approve
 import {
   DecisionResult, ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest,
 } from "../schemas/expense.js";
+import { FxRate, FxRateQuery } from "../schemas/fx.js";
 import { PendingPage, PendingQuery } from "../schemas/pending.js";
 
 export const registry = new OpenAPIRegistry();
@@ -58,8 +59,28 @@ registry.registerPath({
     403: error("Not your expense (not_owner)"),
     404: error("No such expense (expense_not_found)"),
     409: error("The expense is not a draft (not_draft)"),
-    422: error("Can't be submitted as it is: receipt_required (over $75 in USD "
-      + "and no receipt) or unsupported_currency"),
+    422: error("Over $75 in USD and no receipt (receipt_required)"),
+    502: error("The rates provider refused our request (fx_unavailable)"),
+    503: error("No exchange rate available right now (fx_unavailable). "
+      + "The draft is unchanged; retry in a few minutes."),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/fx/rate",
+  operationId: "getFxRate",
+  summary: "The USD rate for a currency and day, for previews",
+  description: "What submit would use for that day. Convert with the shared "
+    + "rule to preview; submit converts again on the server.",
+  security: asPerson,
+  request: { query: FxRateQuery },
+  responses: {
+    200: json("USD per one unit of currency, with the provider's date", FxRate),
+    400: error("Invalid query (invalid_query)"),
+    401: unauthorized,
+    502: error("The rates provider refused our request (fx_unavailable)"),
+    503: error("No exchange rate available right now (fx_unavailable)"),
   },
 });
 

@@ -34,6 +34,7 @@ export const http = ky.create({
   // Call it with relative paths ("v1/..."): "/v1" would drop the /api.
   baseUrl: new URL("/api/", location.origin).href,
   retry: 0, // TanStack Query owns retries, so they don't stack
+  timeout: 15_000, // above the API's own 10 s limit for the rates provider
   hooks: {
     beforeRequest: [
       async ({ request }) => {

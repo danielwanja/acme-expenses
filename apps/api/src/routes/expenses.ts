@@ -12,6 +12,8 @@ import { requireAuth, requireFreshAuth, userOf } from "../middleware/auth.js";
 import {
   approveOne, bulkApprove, expenseNotFound, loadApprover, rejectOne,
 } from "../services/approvals.js";
+import { FxError } from "../services/fx-client.js";
+import { ratesFor } from "../services/fx-rates.js";
 
 // People's routes (employees and managers). Mounted at /api by app.ts.
 // requireAuth goes on each route, not expenses.use(): partner routes share the mount.
@@ -55,13 +57,18 @@ export function configureSpotCheck(source: () => number = Math.random): void {
 
 expenses.post("/v1/expenses/:id/submit", requireAuth, async (req, res) => {
   const { id, ref, expense } = await ownDraft(req, userOf(req));
+  const today = new Date().toISOString().slice(0, 10);
+  let fxRate = 1; // USD expenses skip conversion
+  let fxRateDate = today;
   if (expense.currency !== "USD") {
-    throw new HttpError(422, "unsupported_currency",
-      "Only USD expenses can be submitted for now.",
-      "Foreign currencies arrive with the exchange-rate client.");
+    const fx = await ratesFor(today, expense.currency); // Firestore cache
+    const rate = fx.rates["USD"];
+    if (rate === undefined) {
+      throw new FxError("bad_response", `no USD rate for ${fx.base}`);
+    }
+    fxRate = rate;
+    fxRateDate = fx.date; // the provider's date, not the one we asked for
   }
-  const fxRate = 1;
-  const fxRateDate = new Date().toISOString().slice(0, 10);
   const amountBase = convertToUsd(expense, fxRate).amount; // shared rule
   if (isReceiptRequired(amountBase) && !expense.receiptPath) {
     throw new HttpError(422, "receipt_required",
