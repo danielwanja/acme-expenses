@@ -3,7 +3,7 @@ import { ApiError, SubmitResult } from "@acme/shared";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import request from "supertest";
-import { beforeAll, beforeEach, expect, test, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { app } from "../src/app.js";
 
 // Mock the boundary (token checks), not the route under test.
@@ -52,4 +52,28 @@ test("the owner can edit a draft", async () => {
     .set("Authorization", "Bearer erin").send({ note: "Team lunch" }).expect(204);
   const after = await getFirestore().doc("expenses/d1").get();
   expect(after.get("note")).toBe("Team lunch");
+});
+
+describe("receipt required over $75 (amountBase, USD cents)", () => {
+  test("7,500 cents without a receipt can be submitted", async () => {
+    await getFirestore().doc("expenses/d1").update({ amount: 7_500 });
+    await request(app).post("/api/v1/expenses/d1/submit")
+      .set("Authorization", "Bearer erin").expect(200);
+  });
+
+  test("7,501 cents without a receipt is rejected and stays a draft", async () => {
+    await getFirestore().doc("expenses/d1").update({ amount: 7_501 });
+    const res = await request(app).post("/api/v1/expenses/d1/submit")
+      .set("Authorization", "Bearer erin").expect(422);
+    expect(ApiError.parse(res.body).error.code).toBe("receipt_required");
+    const after = await getFirestore().doc("expenses/d1").get();
+    expect(after.get("status")).toBe("draft");
+  });
+
+  test("7,501 cents with a receipt can be submitted", async () => {
+    await getFirestore().doc("expenses/d1")
+      .update({ amount: 7_501, receiptPath: "receipts/erin/dinner.jpg" });
+    await request(app).post("/api/v1/expenses/d1/submit")
+      .set("Authorization", "Bearer erin").expect(200);
+  });
 });

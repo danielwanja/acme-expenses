@@ -222,7 +222,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: The draft can't be submitted as it is (unsupported_currency)
+          description: "Can't be submitted as it is: receipt_required (over $75 in USD and
+            no receipt) or unsupported_currency"
           content:
             application/json:
               schema:

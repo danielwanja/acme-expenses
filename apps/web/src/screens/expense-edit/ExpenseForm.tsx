@@ -1,4 +1,7 @@
-import { CATEGORIES, NewExpense, parseAmountInput, type Category } from "@acme/shared";
+import {
+  CATEGORIES, formatMoney, isReceiptRequired, NewExpense, parseAmountInput,
+  RECEIPT_REQUIRED_ABOVE_CENTS, type Category,
+} from "@acme/shared";
 import { useState, type FormEvent } from "react";
 import { ApiCallError } from "../../api";
 import { useCreateDraft, useSubmitExpense } from "../../queries/expenses";
@@ -20,6 +23,9 @@ export function ExpenseForm({ uid }: { uid: string }) {
   const busy = saveDraft.isPending || submit.isPending;
 
   const amount = parseAmountInput(amountText, currency);
+  // The hint explains the rule; the API enforces it on the converted amount.
+  const receiptHint = currency === "USD" && amount !== null && isReceiptRequired(amount)
+    && !receipt;
 
   async function save(andSubmit: boolean) {
     setError(null);
@@ -72,6 +78,12 @@ export function ExpenseForm({ uid }: { uid: string }) {
         onChange={(e) => setNote(e.target.value)} /></label>
       <label>Receipt<input type="file" accept="image/*,application/pdf"
         onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} /></label>
+      {receiptHint && (
+        <p className="hint">
+          Expenses over {formatMoney({ amount: RECEIPT_REQUIRED_ABOVE_CENTS, currency: "USD" })}
+          {" "}need a receipt before you can submit. You can still save a draft.
+        </p>
+      )}
       {error && <p role="alert">{error}</p>}
       <div className="actions">
         <button type="button" disabled={busy} onClick={() => void save(false)}>

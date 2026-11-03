@@ -54,7 +54,8 @@ registry.registerPath({
     403: error("Not your expense (not_owner)"),
     404: error("No such expense (expense_not_found)"),
     409: error("The expense is not a draft (not_draft)"),
-    422: error("The draft can't be submitted as it is (unsupported_currency)"),
+    422: error("Can't be submitted as it is: receipt_required (over $75 in USD "
+      + "and no receipt) or unsupported_currency"),
   },
 });
 

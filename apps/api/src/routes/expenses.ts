@@ -1,5 +1,5 @@
 import {
-  canEdit, convertToUsd, DecisionResult, ExpenseIdParams, RejectRequest,
+  canEdit, convertToUsd, DecisionResult, isReceiptRequired, ExpenseIdParams, RejectRequest,
   SubmitResult, UpdateExpenseRequest, type Expense,
 } from "@acme/shared";
 import { Router, type Request } from "express";
@@ -54,6 +54,11 @@ expenses.post("/v1/expenses/:id/submit", requireAuth, async (req, res) => {
   const fxRate = 1;
   const fxRateDate = new Date().toISOString().slice(0, 10);
   const amountBase = convertToUsd(expense, fxRate).amount; // shared rule
+  if (isReceiptRequired(amountBase) && !expense.receiptPath) {
+    throw new HttpError(422, "receipt_required",
+      "Expenses over $75 need a receipt before they can be submitted.",
+      "Attach a receipt image to the draft, then submit again.");
+  }
   await ref.update({
     status: "submitted",
     amountBase,
