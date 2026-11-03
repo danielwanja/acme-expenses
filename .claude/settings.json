@@ -4,7 +4,7 @@
     "allow": [
       "Bash(npm test *)", "Bash(npm run typecheck)", "Bash(npm run lint)",
       "Bash(npm run test:emu)", "Bash(npm run test:e2e)",
-      "Bash(git status *)", "Bash(git diff *)", "Bash(git commit *)",
+      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)", "Bash(git commit *)",
       "WebFetch(domain:docs.rates.example)",
       "mcp__acme-approvals__approvals_list_pending"
     ],
