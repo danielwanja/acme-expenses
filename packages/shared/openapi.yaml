@@ -38,6 +38,7 @@ components:
                 type: string
                 enum:
                   - approved
+                  - sent_to_finance
                   - skipped
               reason:
                 $ref: "#/components/schemas/DenyReason"
@@ -53,6 +54,9 @@ components:
         - not_pending
         - not_your_report
         - not_found
+        - already_approved_by_you
+        - already_approved
+        - not_finance
     ApiError:
       type: object
       properties:
@@ -161,6 +165,7 @@ components:
       enum:
         - draft
         - submitted
+        - awaiting_finance
         - approved
         - rejected
         - exported
@@ -246,6 +251,19 @@ components:
       required:
         - amount
         - currency
+    ApprovalSettings:
+      type: object
+      properties:
+        financeThresholdBase:
+          type: integer
+          exclusiveMinimum: 0
+          description: Over this many USD cents, Finance approves second
+        financeStep:
+          type: boolean
+          description: Rollout flag for the Finance step
+      required:
+        - financeThresholdBase
+        - financeStep
   parameters: {}
 paths:
   /v1/expenses/{id}:
@@ -364,7 +382,8 @@ paths:
           in: path
       responses:
         "200":
-          description: The expense after you approve it
+          description: The expense after you approve it. Over $2,500, a manager's approval
+            returns awaiting_finance; Finance's approval returns approved.
           content:
             application/json:
               schema:
@@ -382,7 +401,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "403":
-          description: "Not allowed: cannot_self_approve or not_your_report"
+          description: "Not allowed: cannot_self_approve, not_your_report or not_finance"
           content:
             application/json:
               schema:
@@ -394,7 +413,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "409":
-          description: Not waiting for approval (not_pending)
+          description: "Nothing for you to decide: not_pending, already_approved_by_you or
+            already_approved"
           content:
             application/json:
               schema:
@@ -418,7 +438,8 @@ paths:
               $ref: "#/components/schemas/RejectRequest"
       responses:
         "200":
-          description: The expense after you reject it
+          description: The expense after you reject it. Over $2,500, a manager's approval
+            returns awaiting_finance; Finance's approval returns approved.
           content:
             application/json:
               schema:
@@ -436,7 +457,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "403":
-          description: "Not allowed: cannot_self_approve or not_your_report"
+          description: "Not allowed: cannot_self_approve, not_your_report or not_finance"
           content:
             application/json:
               schema:
@@ -448,7 +469,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "409":
-          description: Not waiting for approval (not_pending)
+          description: "Nothing for you to decide: not_pending, already_approved_by_you or
+            already_approved"
           content:
             application/json:
               schema:
@@ -478,7 +500,8 @@ paths:
                 - expenseIds
       responses:
         "200":
-          description: One result per id, in request order
+          description: "One result per id, in request order. sent_to_finance: approved by
+            you, now waiting for Finance."
           content:
             application/json:
               schema:
@@ -495,6 +518,7 @@ paths:
                           type: string
                           enum:
                             - approved
+                            - sent_to_finance
                             - skipped
                         reason:
                           $ref: "#/components/schemas/DenyReason"
@@ -575,6 +599,42 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "401":
           description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/settings/approval:
+    put:
+      operationId: updateApprovalSettings
+      summary: Change the Finance threshold or the Finance-step flag (admins only)
+      description: Every change is recorded with who made it and when.
+      security: *a1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalSettings"
+      responses:
+        "200":
+          description: The settings now in force
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalSettings"
+        "400":
+          description: Invalid settings (invalid_body)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Not an admin (not_an_admin)
           content:
             application/json:
               schema:

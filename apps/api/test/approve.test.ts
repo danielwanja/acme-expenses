@@ -13,6 +13,8 @@ vi.mock("firebase-admin/auth", () => ({
 beforeAll(() => initializeApp({ projectId: "demo-acme" }));
 beforeEach(async () => {
   const db = getFirestore();
+  await db.recursiveDelete(db.doc("expenses/e1"));
+  await db.doc("settings/approval").set({ financeThresholdBase: 250_000, financeStep: true });
   await db.doc("users/erin").set({ role: "employee", managerId: "max" });
   await db.doc("expenses/e1").set({ ownerId: "erin", amount: 12_000,
     currency: "USD", status: "submitted", amountBase: 12_000 });
@@ -27,11 +29,13 @@ test("an employee can't approve their own expense", async () => {
 });
 
 test("their manager approves it, and the approver is recorded", async () => {
-  await request(app).post("/api/v1/expenses/e1/approve")
+  const res = await request(app).post("/api/v1/expenses/e1/approve")
     .set("Authorization", "Bearer max").expect(200);
+  expect(res.body.status).toBe("approved");
   const after = await getFirestore().doc("expenses/e1").get();
   expect(after.get("status")).toBe("approved");
-  expect(after.get("approvedBy")).toBe("max");
+  const record = await getFirestore().doc("expenses/e1/approvals/manager").get();
+  expect(record.get("approverId")).toBe("max");
 });
 
 test("a manager from another team can't approve it", async () => {

@@ -1,6 +1,7 @@
 import {
-  checkApproval, planBulkApproval, type Approver, type BulkApproveResult,
-  type DenyReason, type Expense,
+  checkApproval, planBulkApproval, readApprovalSettings,
+  type ApprovalRecord, type ApprovalSettings, type ApprovedDecision, type Approver,
+  type BulkApproveResult, type BulkCandidate, type DenyReason, type Expense,
 } from "@acme/shared";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import {
@@ -12,7 +13,11 @@ import { HttpError } from "../errors.js";
 const DENIED: Record<DenyReason, [number, string]> = {
   cannot_self_approve: [403, "You can't approve or reject your own expense."],
   not_your_report: [403, "This expense belongs to someone outside your team."],
+  not_finance: [403, "This step needs an approver from Finance."],
   not_pending: [409, "This expense isn't waiting for approval."],
+  already_approved_by_you: [409, "You already approved this expense; "
+    + "the second approval must come from someone else."],
+  already_approved: [409, "Every required approval is already recorded."],
   not_found: [404, "No such expense."],
 };
 
@@ -31,33 +36,105 @@ export function reportsOf(uid: string, tx?: Transaction) {
   return tx ? tx.get(q) : q.get();
 }
 
-/** The approver and the people who report to them. */
-export async function loadApprover(tx: Transaction | undefined, uid: string): Promise<Approver> {
-  const reports = await reportsOf(uid, tx);
-  return { uid, team: reports.docs.map((d) => d.id) };
+/** Display names for these users (users/{uid}.displayName), keyed by uid. */
+export async function employeeNames(uids: string[]): Promise<Map<string, string>> {
+  const db = getFirestore();
+  const unique = [...new Set(uids)];
+  if (unique.length === 0) return new Map();
+  const snaps = await db.getAll(...unique.map((uid) => db.doc(`users/${uid}`)));
+  return new Map(snaps.map((s) => [s.id, String(s.get("displayName") ?? s.id)]));
 }
+
+/** The approver: their reports, and the Finance custom claim the rules also use. */
+export async function loadApprover(
+  tx: Transaction | undefined, user: DecodedIdToken,
+): Promise<Approver> {
+  const reports = await reportsOf(user.uid, tx);
+  const team = reports.docs.map((d) => d.id);
+  return { uid: user.uid, team, isFinance: user["finance"] === true };
+}
+
+/** settings/approval, validated on every read. Missing or invalid fails closed. */
+export async function loadSettings(tx?: Transaction): Promise<ApprovalSettings> {
+  const ref = getFirestore().doc("settings/approval");
+  const snap = tx ? await tx.get(ref) : await ref.get();
+  return readApprovalSettings(snap.data());
+}
+
+export async function loadApprovals(
+  ref: DocumentReference, tx?: Transaction,
+): Promise<ApprovalRecord[]> {
+  const q = ref.collection("approvals");
+  const snap = tx ? await tx.get(q) : await q.get();
+  return snap.docs.map((d) => d.data() as ApprovalRecord);
+}
+
+type ApplyInput = {
+  approver: Approver;
+  expense: Pick<Expense, "amountBase">;
+  settings: ApprovalSettings;
+  via: "single" | "bulk";
+};
 
 /** The one write an approval makes, for single and bulk alike. */
 export function applyApproval(
-  tx: Transaction, ref: DocumentReference, approver: Approver, via: "single" | "bulk",
+  tx: Transaction,
+  ref: DocumentReference,
+  { approver, expense, settings, via }: ApplyInput,
+  decision: ApprovedDecision,
 ): void {
+  // The step is the document id, and create() fails if it exists:
+  // two racing approvers can't both give the same step.
+  tx.create(ref.collection("approvals").doc(decision.step), {
+    step: decision.step,
+    approverId: approver.uid,
+    decidedAt: FieldValue.serverTimestamp(),
+    amountBase: expense.amountBase ?? null, // Firestore rejects undefined
+    financeThresholdBase: settings.financeThresholdBase,
+    via, // "single" | "bulk"
+  });
   tx.update(ref, {
-    status: "approved",
-    approvedBy: approver.uid,
-    approvedAt: FieldValue.serverTimestamp(),
-    approvedVia: via, // documents without it were approved one at a time
+    status: decision.nextStatus,
+    // The partner API (Chapter 8) lists approved expenses by approvedAt.
+    ...(decision.nextStatus === "approved"
+      ? { approvedAt: FieldValue.serverTimestamp() } : {}),
   });
 }
 
-export async function approveOne(user: DecodedIdToken, expenseId: string): Promise<void> {
+/** Reads the expense, its approvals and the settings; decides; writes, in one transaction. */
+async function decide(
+  user: DecodedIdToken, expenseId: string,
+  write: (tx: Transaction, ref: DocumentReference, ctx: ApplyInput,
+    decision: ApprovedDecision) => void,
+): Promise<ApprovedDecision> {
   const db = getFirestore();
   const ref = db.doc(`expenses/${expenseId}`);
-  await db.runTransaction(async (tx) => {
-    const [snap, approver] = await Promise.all([tx.get(ref), loadApprover(tx, user.uid)]);
+  return db.runTransaction(async (tx) => {
+    const [snap, approver, settings, approvals] = await Promise.all([
+      tx.get(ref), loadApprover(tx, user), loadSettings(tx), loadApprovals(ref, tx),
+    ]);
     if (!snap.exists) throw expenseNotFound(expenseId);
-    const decision = checkApproval(approver, snap.data() as Expense);
+    const expense = snap.data() as Expense;
+    const decision = checkApproval({ approver, expense, approvals, settings });
     if (!decision.ok) throw deniedError(decision.reason);
-    applyApproval(tx, ref, approver, "single");
+    write(tx, ref, { approver, expense, settings, via: "single" }, decision);
+    return decision;
+  });
+}
+
+export function approveOne(user: DecodedIdToken, expenseId: string) {
+  return decide(user, expenseId, applyApproval);
+}
+
+/** Rejecting takes the same permission as approving the current step. */
+export function rejectOne(user: DecodedIdToken, expenseId: string, reason: string) {
+  return decide(user, expenseId, (tx, ref, { approver }) => {
+    tx.update(ref, {
+      status: "rejected",
+      rejectedBy: approver.uid,
+      rejectedAt: FieldValue.serverTimestamp(),
+      rejectionReason: reason,
+    });
   });
 }
 
@@ -68,37 +145,20 @@ export async function bulkApprove(
   const db = getFirestore();
   const refs = ids.map((id) => db.doc(`expenses/${id}`));
   return db.runTransaction(async (tx) => {
-    const snaps = await tx.getAll(...refs);
-    const found = new Map(
-      snaps.filter((s) => s.exists)
-        .map((s) => [s.id, s.data() as Expense]),
-    );
-    const results = planBulkApproval(approver, found, ids);
-    for (const r of results) {
-      if (r.outcome !== "approved") continue;
-      const ref = db.doc(`expenses/${r.expenseId}`);
-      applyApproval(tx, ref, approver, "bulk"); // same write as single
+    const [snaps, settings] = await Promise.all([tx.getAll(...refs), loadSettings(tx)]);
+    const found = new Map<string, BulkCandidate>();
+    for (const s of snaps.filter((x) => x.exists)) {
+      const approvals = await loadApprovals(s.ref, tx);
+      found.set(s.id, { expense: s.data() as Expense, approvals });
     }
-    return results;
-  });
-}
-
-/** Rejecting takes the same permission as approving. */
-export async function rejectOne(
-  user: DecodedIdToken, expenseId: string, reason: string,
-): Promise<void> {
-  const db = getFirestore();
-  const ref = db.doc(`expenses/${expenseId}`);
-  await db.runTransaction(async (tx) => {
-    const [snap, approver] = await Promise.all([tx.get(ref), loadApprover(tx, user.uid)]);
-    if (!snap.exists) throw expenseNotFound(expenseId);
-    const decision = checkApproval(approver, snap.data() as Expense);
-    if (!decision.ok) throw deniedError(decision.reason);
-    tx.update(ref, {
-      status: "rejected",
-      rejectedBy: approver.uid,
-      rejectedAt: FieldValue.serverTimestamp(),
-      rejectionReason: reason,
-    });
+    const plans = planBulkApproval(approver, found, ids, settings);
+    for (const { result, decision } of plans) {
+      if (!decision) continue;
+      const ref = db.doc(`expenses/${result.expenseId}`);
+      const expense = found.get(result.expenseId)?.expense ?? {};
+      // Same write as a single approval:
+      applyApproval(tx, ref, { approver, expense, settings, via: "bulk" }, decision);
+    }
+    return plans.map((p) => p.result);
   });
 }

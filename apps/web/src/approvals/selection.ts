@@ -15,8 +15,12 @@ export function bulkBlocker(count: number): string | null {
   return null;
 }
 
-/** "12 approved, 1 skipped" */
+/** "12 approved, 1 skipped", plus "2 sent to Finance" when there are any. */
 export function summarize(results: BulkApproveResult[]): string {
-  const approved = results.filter((r) => r.outcome === "approved").length;
-  return `${approved} approved, ${results.length - approved} skipped`;
+  const count = (o: BulkApproveResult["outcome"]) =>
+    results.filter((r) => r.outcome === o).length;
+  const toFinance = count("sent_to_finance");
+  const parts = [`${count("approved")} approved`, `${count("skipped")} skipped`];
+  if (toFinance > 0) parts.push(`${toFinance} sent to Finance`);
+  return parts.join(", ");
 }

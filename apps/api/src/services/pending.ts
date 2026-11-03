@@ -1,11 +1,15 @@
 import {
-  checkApproval, formatMoney, PendingPage, type Approver, type Expense,
+  checkApproval, formatMoney, PENDING, PendingPage, type Approver, type Expense,
   type PendingItem, type PendingQuery,
 } from "@acme/shared";
 import type { DecodedIdToken } from "firebase-admin/auth";
-import { getFirestore, type Timestamp } from "firebase-admin/firestore";
+import {
+  getFirestore, type QueryDocumentSnapshot, type Timestamp,
+} from "firebase-admin/firestore";
 import { HttpError } from "../errors.js";
-import { reportsOf } from "./approvals.js";
+import {
+  employeeNames, loadApprovals, loadApprover, loadSettings,
+} from "./approvals.js";
 
 type Stored = Expense & { submittedAt?: Timestamp };
 type Candidate = { id: string; expense: Stored };
@@ -24,18 +28,26 @@ function decodeCursor(raw: string, total: number): number {
   return offset;
 }
 
-/** Submitted expenses from the approver's reports (Firestore "in" takes 30 values). */
+/**
+ * Candidates: pending expenses from the approver's reports (Firestore "in"
+ * takes 30 values) and, for Finance, everything awaiting Finance.
+ * The shared rule then decides which of them this approver may approve.
+ */
 async function candidatesFor(approver: Approver): Promise<Candidate[]> {
   const db = getFirestore();
-  const out: Candidate[] = [];
+  const byId = new Map<string, Candidate>();
+  const add = (docs: QueryDocumentSnapshot[]) => {
+    for (const d of docs) byId.set(d.id, { id: d.id, expense: d.data() as Stored });
+  };
   for (let i = 0; i < approver.team.length; i += 30) {
     const snap = await db.collection("expenses")
-      .where("ownerId", "in", approver.team.slice(i, i + 30))
-      .where("status", "==", "submitted")
-      .get();
-    out.push(...snap.docs.map((d) => ({ id: d.id, expense: d.data() as Stored })));
+      .where("ownerId", "in", approver.team.slice(i, i + 30)).get();
+    add(snap.docs.filter((d) => PENDING.includes(d.get("status"))));
   }
-  return out;
+  if (approver.isFinance) {
+    add((await db.collection("expenses").where("status", "==", "awaiting_finance").get()).docs);
+  }
+  return [...byId.values()];
 }
 
 function toItem(
@@ -65,11 +77,17 @@ function toItem(
 
 /** Only what this caller may approve: the shared rule decides, per expense. */
 export async function listPending(user: DecodedIdToken, q: PendingQuery): Promise<PendingPage> {
-  const reports = await reportsOf(user.uid);
-  const approver: Approver = { uid: user.uid, team: reports.docs.map((d) => d.id) };
-  const names = new Map(reports.docs.map((d) => [d.id, String(d.get("displayName") ?? d.id)]));
-  const pending = (await candidatesFor(approver))
-    .filter((c) => checkApproval(approver, c.expense).ok)
+  const approver = await loadApprover(undefined, user);
+  const settings = await loadSettings();
+  const db = getFirestore();
+  const allowed: Candidate[] = [];
+  for (const c of await candidatesFor(approver)) {
+    const approvals = await loadApprovals(db.doc(`expenses/${c.id}`));
+    if (checkApproval({ approver, expense: c.expense, approvals, settings }).ok) allowed.push(c);
+  }
+  const owners = allowed.map((c) => c.expense.ownerId);
+  const names = await employeeNames(owners);
+  const pending = allowed
     .sort((a, b) => (a.expense.submittedAt?.toMillis() ?? 0)
       - (b.expense.submittedAt?.toMillis() ?? 0) || a.id.localeCompare(b.id));
   const offset = q.cursor ? decodeCursor(q.cursor, pending.length) : 0;

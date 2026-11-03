@@ -4,6 +4,7 @@ import type { Status } from "@acme/shared";
 const LABELS: Record<Status, string> = {
   draft: "Draft",
   submitted: "Submitted",
+  awaiting_finance: "Awaiting Finance",
   approved: "Approved",
   rejected: "Rejected",
   exported: "Exported",

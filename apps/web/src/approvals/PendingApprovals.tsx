@@ -1,11 +1,26 @@
-import type { PendingItem } from "@acme/shared";
+import {
+  formatMoney, requiredSteps, type ApprovalSettings, type PendingItem,
+} from "@acme/shared";
 import { useState } from "react";
 import { ApiCallError } from "../api";
 import {
   useApprove, useBulkApprove, usePendingApprovals, useReject,
 } from "../queries/approvals";
+import { useApprovalSettings } from "../queries/settings";
 import { BulkApproveSummary } from "./BulkApproveSummary";
 import { bulkBlocker, toggle } from "./selection";
+
+/** Explains the Finance step with the shared rule. It never decides anything. */
+function nextStepNote(e: PendingItem, settings: ApprovalSettings | null): string | null {
+  if (!settings || !e.status) return null;
+  if (e.status === "awaiting_finance") {
+    return "Manager approved. Finance gives the second approval.";
+  }
+  const steps = requiredSteps({ status: e.status, amountBase: e.converted?.amount }, settings);
+  if (!steps.includes("finance")) return null;
+  const limit = formatMoney({ amount: settings.financeThresholdBase, currency: "USD" });
+  return `Over ${limit}: Finance approves after you.`;
+}
 
 const label = (e: PendingItem) =>
   `${e.employeeName}, ${e.amountDisplay}, ${e.category}`;
@@ -22,6 +37,8 @@ export function PendingApprovals() {
   const [labels, setLabels] = useState(new Map<string, string>());
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  // Explains the Finance step; if it can't load, the note is just left out.
+  const settings = useApprovalSettings().data ?? null;
 
   // Each mutation refetches the pending list when it succeeds.
   async function act(run: () => Promise<unknown>) {
@@ -101,7 +118,12 @@ export function PendingApprovals() {
                   </td>
                   <td>{e.employeeName}</td>
                   <td>{e.category}</td>
-                  <td>{e.amountDisplay}</td>
+                  <td>
+                    {e.amountDisplay}
+                    {nextStepNote(e, settings) && (
+                      <small className="hint"> {nextStepNote(e, settings)}</small>
+                    )}
+                  </td>
                   <td>{e.ageDays} d</td>
                   <td>
                     <button type="button"

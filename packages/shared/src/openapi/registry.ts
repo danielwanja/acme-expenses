@@ -1,6 +1,7 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import type { ZodType } from "zod";
 import { ApiError } from "../schemas/api-error.js";
+import { ApprovalSettings } from "../schemas/approval.js";
 import { BulkApproveRequest, BulkApproveResponse } from "../schemas/bulk-approve.js";
 import {
   DecisionResult, ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest,
@@ -65,12 +66,14 @@ registry.registerPath({
 const decide = (verb: "approve" | "reject") => ({
   security: asPerson,
   responses: {
-    200: json(`The expense after you ${verb} it`, DecisionResult),
+    200: json(`The expense after you ${verb} it. Over $2,500, a manager's approval `
+      + "returns awaiting_finance; Finance's approval returns approved.", DecisionResult),
     400: error("Invalid body"),
     401: unauthorized,
-    403: error("Not allowed: cannot_self_approve or not_your_report"),
+    403: error("Not allowed: cannot_self_approve, not_your_report or not_finance"),
     404: error("No such expense (expense_not_found)"),
-    409: error("Not waiting for approval (not_pending)"),
+    409: error("Nothing for you to decide: not_pending, already_approved_by_you "
+      + "or already_approved"),
   },
 });
 
@@ -108,7 +111,8 @@ registry.registerPath({
   security: asPerson,
   request: { body: { content: { "application/json": { schema: BulkApproveRequest } } } },
   responses: {
-    200: json("One result per id, in request order", BulkApproveResponse),
+    200: json("One result per id, in request order. sent_to_finance: approved by you, "
+      + "now waiting for Finance.", BulkApproveResponse),
     400: error("Empty, more than 20, or duplicate expenseIds (invalid_body)"),
     401: unauthorized,
     403: error("Only managers can bulk-approve (not_a_manager)"),
@@ -131,5 +135,23 @@ registry.registerPath({
     400: error("Invalid query (invalid_query) or stale cursor (cursor_invalid: "
       + "call again without cursor)"),
     401: unauthorized,
+  },
+});
+
+// ---- Admin ----
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/settings/approval",
+  operationId: "updateApprovalSettings",
+  summary: "Change the Finance threshold or the Finance-step flag (admins only)",
+  description: "Every change is recorded with who made it and when.",
+  security: asPerson,
+  request: { body: { content: { "application/json": { schema: ApprovalSettings } } } },
+  responses: {
+    200: json("The settings now in force", ApprovalSettings),
+    400: error("Invalid settings (invalid_body)"),
+    401: unauthorized,
+    403: error("Not an admin (not_an_admin)"),
   },
 });

@@ -9,6 +9,9 @@ service cloud.firestore {
     function isManager() {
       return signedIn() && request.auth.token.role == "manager";
     }
+    function isFinance() {
+      return request.auth != null && request.auth.token.finance == true;
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isManager());
@@ -28,10 +31,30 @@ service cloud.firestore {
         && request.resource.data.amount >= 0
         && request.resource.data.currency is string
         && request.resource.data.currency.size() == 3;
-      allow read: if signedIn()
+      allow read: if request.auth != null
         && (resource.data.ownerId == request.auth.uid
-            || request.auth.token.role == "manager");
+            || request.auth.token.role == "manager"
+            || (isFinance() && resource.data.status == "awaiting_finance"));
       allow update, delete: if false; // edits and approvals go through the API
+
+      // The audit trail: one record per approval step.
+      match /approvals/{step} {
+        allow read: if request.auth != null
+          && (request.auth.token.role == "manager" || isFinance());
+        allow write: if false; // server-only, append-only
+      }
+    }
+
+    // Approval settings: everyone signed in may read them (the UI explains the
+    // threshold); changes go through the admin route, which records who and when.
+    match /settings/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Server-only collections. The Admin SDK bypasses rules; clients get nothing.
+    match /notifications/{id} {
+      allow read, write: if false;
     }
   }
 }

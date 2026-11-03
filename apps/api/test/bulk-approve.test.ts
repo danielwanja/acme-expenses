@@ -22,6 +22,7 @@ beforeAll(() => initializeApp({ projectId: "demo-acme" }));
 beforeEach(async () => {
   await clearFirestore();
   const db = getFirestore();
+  await db.doc("settings/approval").set({ financeThresholdBase: 250_000, financeStep: true });
   await db.doc("users/erin").set({ managerId: "max" });
   await db.doc("users/sam").set({ managerId: "max" });
   await db.doc("users/zoe").set({ managerId: "lee" });
@@ -40,8 +41,17 @@ test("happy path: every expense is approved, marked as bulk", async () => {
     .toEqual(["approved", "approved"]);
   const b1 = await getFirestore().doc("expenses/b1").get();
   expect(b1.get("status")).toBe("approved");
-  expect(b1.get("approvedVia")).toBe("bulk");
-  expect(b1.get("approvedBy")).toBe("max");
+  const record = await getFirestore().doc("expenses/b1/approvals/manager").get();
+  expect(record.data()).toMatchObject({ approverId: "max", via: "bulk" });
+});
+
+test("over $2,500 is sent to Finance, never reported as approved", async () => {
+  await getFirestore().doc("expenses/b1").update({ amountBase: 300_000 });
+  const res = await bulk(["b1"]).expect(200);
+  expect(BulkApproveResponse.parse(res.body).results)
+    .toEqual([{ expenseId: "b1", outcome: "sent_to_finance" }]);
+  const b1 = await getFirestore().doc("expenses/b1").get();
+  expect(b1.get("status")).toBe("awaiting_finance");
 });
 
 test("mixed results: refused ones are skipped with a reason, not fatal", async () => {

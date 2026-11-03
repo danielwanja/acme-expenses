@@ -21,7 +21,9 @@ type SeedUser = {
 export const USERS: SeedUser[] = [
   { uid: "erin", displayName: "Erin", role: "employee", managerId: "max" },
   { uid: "sam", displayName: "Sam", role: "employee", managerId: "max" },
+  { uid: "ada", displayName: "Ada", role: "employee", managerId: "max" },
   { uid: "max", displayName: "Max", role: "manager" },
+  { uid: "fran", displayName: "Fran", role: "employee", finance: true },
 ];
 
 /** One emulator call. "Bearer owner" is the emulators' admin token: it bypasses rules. */
@@ -76,6 +78,9 @@ export async function seed(): Promise<void> {
       displayName: u.displayName, role: u.role, managerId: u.managerId ?? null,
     });
   }
+
+  // Config the server and the UI both read: over $2,500 needs Finance.
+  await setDoc("settings/approval", { financeThresholdBase: 250_000, financeStep: true });
 
   // Three submitted expenses from Sam for the bulk-approve spec. Each is over
   // $75, with a receipt: anything smaller would have been approved automatically.

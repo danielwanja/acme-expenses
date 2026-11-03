@@ -7,8 +7,9 @@ import { beforeAll, beforeEach, expect, test, vi } from "vitest";
 import { app } from "../src/app.js";
 import { clearFirestore } from "./emulator.js";
 
+// The token is the uid; "fran" carries the finance claim.
 vi.mock("firebase-admin/auth", () => ({
-  getAuth: () => ({ verifyIdToken: async (t: string) => ({ uid: t }) }),
+  getAuth: () => ({ verifyIdToken: async (t: string) => ({ uid: t, finance: t === "fran" }) }),
 }));
 
 const daysAgo = (n: number) => Timestamp.fromMillis(Date.now() - n * 86_400_000);
@@ -26,6 +27,7 @@ beforeAll(() => initializeApp({ projectId: "demo-acme" }));
 beforeEach(async () => {
   await clearFirestore();
   const db = getFirestore();
+  await db.doc("settings/approval").set({ financeThresholdBase: 250_000, financeStep: true });
   await db.doc("users/erin").set({ displayName: "Erin", managerId: "max" });
   await db.doc("users/sam").set({ displayName: "Sam", managerId: "max" });
   await db.doc("users/zoe").set({ displayName: "Zoe", managerId: "other" });
@@ -65,4 +67,17 @@ test("pages with nextCursor, then cursor_invalid for a stale cursor", async () =
   expect(second.nextCursor).toBeNull();
   const bad = await pending("?cursor=garbage").expect(400);
   expect(ApiError.parse(bad.body).error.code).toBe("cursor_invalid");
+});
+
+test("Finance sees what awaits Finance; the manager no longer does", async () => {
+  const db = getFirestore();
+  await db.doc("users/fran").set({ displayName: "Fran", managerId: "boss" });
+  await db.doc("expenses/e2").update({ status: "awaiting_finance", amountBase: 300_000 });
+  await db.doc("expenses/e2/approvals/manager")
+    .set({ step: "manager", approverId: "max", via: "single" });
+  const asFran = await request(app).get("/api/v1/approvals/pending")
+    .set("Authorization", "Bearer fran").expect(200);
+  expect(PendingPage.parse(asFran.body).items.map((i) => i.expenseId)).toEqual(["e2"]);
+  const asMax = PendingPage.parse((await pending().expect(200)).body);
+  expect(asMax.items.map((i) => i.expenseId)).toEqual(["e1"]);
 });

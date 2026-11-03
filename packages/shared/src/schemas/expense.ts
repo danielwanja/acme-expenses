@@ -1,7 +1,7 @@
 import { z } from "../zod.js";
 
 export const STATUSES = [
-  "draft", "submitted", "approved", "rejected", "exported",
+  "draft", "submitted", "awaiting_finance", "approved", "rejected", "exported",
 ] as const;
 export const Status = z.enum(STATUSES).openapi("Status");
 export type Status = z.infer<typeof Status>;

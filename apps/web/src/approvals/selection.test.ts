@@ -25,6 +25,13 @@ test("toggle adds and removes without mutating", () => {
   expect(empty.size).toBe(0);
 });
 
+test("summarize mentions Finance only when something went there", () => {
+  expect(summarize([
+    { expenseId: "a", outcome: "approved" },
+    { expenseId: "b", outcome: "sent_to_finance" },
+  ])).toBe("1 approved, 0 skipped, 1 sent to Finance");
+});
+
 test("summarize counts approved and skipped", () => {
   expect(summarize([
     { expenseId: "a", outcome: "approved" },

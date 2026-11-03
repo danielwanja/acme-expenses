@@ -96,15 +96,15 @@ expenses.post("/v1/expenses/bulk-approve", requireFreshAuth, async (req, res) =>
     throw new HttpError(403, "not_a_manager", "Only managers can bulk-approve.");
   }
   const { expenseIds } = parse(BulkApproveRequest, req.body, "body");
-  const approver = await loadApprover(undefined, user.uid);
+  const approver = await loadApprover(undefined, user);
   const results = await bulkApprove(approver, expenseIds);
   res.json(BulkApproveResponse.parse({ results }));
 });
 
 expenses.post("/v1/expenses/:id/approve", requireFreshAuth, async (req, res) => {
   const { id } = parse(ExpenseIdParams, req.params, "params");
-  await approveOne(userOf(req), id);
-  res.json(DecisionResult.parse({ expenseId: id, status: "approved" }));
+  const decision = await approveOne(userOf(req), id);
+  res.json(DecisionResult.parse({ expenseId: id, status: decision.nextStatus }));
 });
 
 expenses.post("/v1/expenses/:id/reject", requireFreshAuth, async (req, res) => {

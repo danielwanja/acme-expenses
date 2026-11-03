@@ -122,7 +122,62 @@ describe("changing expenses", () => {
   });
 });
 
+describe("Finance second approval", () => {
+  const finance = () => testEnv.authenticatedContext("fran", { finance: true }).firestore();
+
+  test("a Finance user reads an expense awaiting Finance", async () => {
+    await seed("expenses/e1", draft("erin", { status: "awaiting_finance" }));
+    await assertSucceeds(getDoc(doc(finance(), "expenses/e1")));
+  });
+
+  test("a Finance user can't read an expense that isn't awaiting Finance", async () => {
+    await seed("expenses/e1", draft("erin", { status: "submitted" }));
+    await assertFails(getDoc(doc(finance(), "expenses/e1")));
+  });
+
+  test("Finance and managers read approval records; employees don't", async () => {
+    await seed("expenses/e1", draft("erin", { status: "awaiting_finance" }));
+    await seed("expenses/e1/approvals/manager", { step: "manager", approverId: "max" });
+    await assertSucceeds(getDoc(doc(finance(), "expenses/e1/approvals/manager")));
+    const erin = testEnv.authenticatedContext("erin").firestore();
+    await assertFails(getDoc(doc(erin, "expenses/e1/approvals/manager")));
+  });
+
+  test("a Finance user's client can't create an approval record", async () => {
+    await seed("expenses/e1", draft("erin", { status: "awaiting_finance" }));
+    await assertFails(setDoc(doc(finance(), "expenses/e1/approvals/finance"),
+      { step: "finance", approverId: "fran" }));
+  });
+
+  test("nobody's client can write to an approval record", async () => {
+    await seed("expenses/e1/approvals/manager", { step: "manager", approverId: "max" });
+    const max = testEnv.authenticatedContext("max", { role: "manager" }).firestore();
+    await assertFails(updateDoc(doc(max, "expenses/e1/approvals/manager"),
+      { approverId: "someone-else" }));
+  });
+
+  test("a Finance user's client can't set status either", async () => {
+    await seed("expenses/e1", draft("erin", { status: "awaiting_finance" }));
+    await assertFails(updateDoc(doc(finance(), "expenses/e1"), { status: "approved" }));
+  });
+});
+
 describe("server-only data", () => {
+  test("anyone signed in reads approval settings; no client writes them", async () => {
+    await seed("settings/approval", { financeThresholdBase: 250_000, financeStep: true });
+    const erin = testEnv.authenticatedContext("erin").firestore();
+    await assertSucceeds(getDoc(doc(erin, "settings/approval")));
+    const admin = testEnv.authenticatedContext("root", { admin: true }).firestore();
+    await assertFails(setDoc(doc(admin, "settings/approval"),
+      { financeThresholdBase: 1, financeStep: false }));
+  });
+
+  test("notifications are server-only", async () => {
+    await seed("notifications/n1", { to: "owner", expenseId: "e1" });
+    const erin = testEnv.authenticatedContext("erin").firestore();
+    await assertFails(getDoc(doc(erin, "notifications/n1")));
+  });
+
   test("nobody can give themselves a role through users/{uid}", async () => {
     await seed("users/erin", { role: "employee", managerId: "max" });
     const erin = testEnv.authenticatedContext("erin").firestore();

@@ -10,6 +10,9 @@ const reasonCopy: Record<SkipReason, string> = {
   not_pending: "It's no longer waiting for approval.",
   not_your_report: "It belongs to someone outside your team.",
   not_found: "It no longer exists.",
+  already_approved_by_you: "You already approved it; someone else gives the next approval.",
+  already_approved: "Every approval it needs is already recorded.",
+  not_finance: "It's waiting for Finance's approval.",
 };
 
 export function BulkApproveSummary(

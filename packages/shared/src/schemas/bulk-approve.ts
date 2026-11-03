@@ -15,7 +15,7 @@ export const BulkApproveRequest = z.object({
 
 export const BulkApproveResult = z.object({
   expenseId: z.string(),
-  outcome: z.enum(["approved", "skipped"]),
+  outcome: z.enum(["approved", "sent_to_finance", "skipped"]),
   reason: DenyReason.optional(),
 });
 export type BulkApproveResult = z.infer<typeof BulkApproveResult>;

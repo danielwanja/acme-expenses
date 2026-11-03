@@ -6,6 +6,7 @@ const apiEmulatorTests = [
   "test/approve.test.ts",
   "test/bulk-approve.test.ts",
   "test/expenses.test.ts",
+  "test/finance-approval.test.ts",
   "test/pending.test.ts",
 ];
 
