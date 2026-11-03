@@ -1,4 +1,5 @@
 ## Commands
+- npm ci                   # install; run it first in every new worktree
 - npm test                 # unit tests (Vitest), all workspaces
 - npx vitest run <file>    # one test file
 - npm run test:emu         # API + rules tests inside the emulators
@@ -25,3 +26,4 @@
 ## Gotchas
 - packages/shared/openapi.yaml is generated from Zod. Don't hand-edit.
 - Emulator suites share ports: run one at a time.
+- Routes start at /v1; app.ts mounts them at /api. Callers use /api/v1.

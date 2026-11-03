@@ -45,5 +45,8 @@
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true
   }
 }

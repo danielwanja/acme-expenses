@@ -1,0 +1,49 @@
+name: Nightly
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Chapter 7: fail loudly when the rates provider changes its contract.
+  fx-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --project api contract
+        env:
+          FX_CONTRACT: "1"
+          FX_BASE_URL: ${{ vars.FX_BASE_URL }}
+          FX_SANDBOX_KEY: ${{ secrets.FX_SANDBOX_KEY }}
+
+  # Chapter 12: a headless, read-only check. --bare skips repo hooks, Skills,
+  # MCP servers and CLAUDE.md; we pass back only the project rules.
+  untested-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Routes without tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude --bare -p "Which routes in apps/api/src/routes lack a test?" \
+            --append-system-prompt-file CLAUDE.md \
+            --allowedTools "Read,Grep,Glob" \
+            --permission-mode dontAsk \
+            --max-turns 10 \
+            --output-format json \
+            --json-schema "$(cat scripts/untested-routes.schema.json)" \
+            | jq -e '.structured_output'
