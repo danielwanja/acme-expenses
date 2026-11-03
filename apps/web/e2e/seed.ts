@@ -20,6 +20,7 @@ type SeedUser = {
 
 export const USERS: SeedUser[] = [
   { uid: "erin", displayName: "Erin", role: "employee", managerId: "max" },
+  { uid: "sam", displayName: "Sam", role: "employee", managerId: "max" },
   { uid: "max", displayName: "Max", role: "manager" },
 ];
 
@@ -73,6 +74,18 @@ export async function seed(): Promise<void> {
     });
     await setDoc(`users/${u.uid}`, {
       displayName: u.displayName, role: u.role, managerId: u.managerId ?? null,
+    });
+  }
+
+  // Three submitted expenses from Sam for the bulk-approve spec. Each is over
+  // $75, with a receipt: anything smaller would have been approved automatically.
+  for (const [i, cents] of [12_000, 34_000, 56_000].entries()) {
+    await setDoc(`expenses/sam-${i + 1}`, {
+      ownerId: "sam", amount: cents, currency: "USD", category: "Travel",
+      spentOn: "2026-10-20", note: "", receiptPath: `receipts/sam/trip-${i + 1}.jpg`,
+      status: "submitted",
+      amountBase: cents, baseCurrency: "USD", fxRate: 1, fxRateDate: "2026-10-20",
+      submittedAt: new Date(),
     });
   }
 }

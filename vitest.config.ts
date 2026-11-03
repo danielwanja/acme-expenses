@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 // Everything else in apps/api/test runs in plain npm test.
 const apiEmulatorTests = [
   "test/approve.test.ts",
+  "test/bulk-approve.test.ts",
   "test/expenses.test.ts",
   "test/pending.test.ts",
 ];

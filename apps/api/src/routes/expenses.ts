@@ -1,4 +1,5 @@
 import {
+  BulkApproveRequest, BulkApproveResponse,
   canEdit, convertToUsd, DecisionResult, isAutoApproved, isReceiptRequired, isSpotChecked,
   ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest, type Expense,
 } from "@acme/shared";
@@ -8,7 +9,9 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { HttpError } from "../errors.js";
 import { requireAuth, requireFreshAuth, userOf } from "../middleware/auth.js";
-import { approveOne, expenseNotFound, rejectOne } from "../services/approvals.js";
+import {
+  approveOne, bulkApprove, expenseNotFound, loadApprover, rejectOne,
+} from "../services/approvals.js";
 
 // People's routes (employees and managers). Mounted at /api by app.ts.
 // requireAuth goes on each route, not expenses.use(): partner routes share the mount.
@@ -85,6 +88,17 @@ expenses.post("/v1/expenses/:id/submit", requireAuth, async (req, res) => {
     expenseId: id, status, ...(auto ? { approvedBy: "auto" } : {}),
     amountBase, baseCurrency: "USD", fxRate, fxRateDate,
   }));
+});
+
+expenses.post("/v1/expenses/bulk-approve", requireFreshAuth, async (req, res) => {
+  const user = userOf(req);
+  if (user["role"] !== "manager") {
+    throw new HttpError(403, "not_a_manager", "Only managers can bulk-approve.");
+  }
+  const { expenseIds } = parse(BulkApproveRequest, req.body, "body");
+  const approver = await loadApprover(undefined, user.uid);
+  const results = await bulkApprove(approver, expenseIds);
+  res.json(BulkApproveResponse.parse({ results }));
 });
 
 expenses.post("/v1/expenses/:id/approve", requireFreshAuth, async (req, res) => {

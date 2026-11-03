@@ -1,6 +1,6 @@
 // Calls to Acme's own API. Every response is parsed with the shared schema.
 import {
-  DecisionResult, PendingPage, SubmitResult, type PendingQuery,
+  BulkApproveResponse, DecisionResult, PendingPage, SubmitResult, type PendingQuery,
 } from "@acme/shared";
 import { http } from "./http";
 
@@ -20,3 +20,7 @@ export const listPending = (
   query: Partial<PendingQuery> = {}, signal?: AbortSignal,
 ) => http.get("v1/approvals/pending", { searchParams: query, signal })
   .json(PendingPage);
+
+export const bulkApprove = (expenseIds: string[]) =>
+  http.post("v1/expenses/bulk-approve", { json: { expenseIds } })
+    .json(BulkApproveResponse);

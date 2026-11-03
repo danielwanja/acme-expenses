@@ -1,6 +1,7 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import type { ZodType } from "zod";
 import { ApiError } from "../schemas/api-error.js";
+import { BulkApproveRequest, BulkApproveResponse } from "../schemas/bulk-approve.js";
 import {
   DecisionResult, ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest,
 } from "../schemas/expense.js";
@@ -92,6 +93,26 @@ registry.registerPath({
     body: { content: { "application/json": { schema: RejectRequest } } },
   },
   ...decide("reject"),
+});
+
+registry.register("BulkApproveRequest", BulkApproveRequest);
+registry.register("BulkApproveResponse", BulkApproveResponse);
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/expenses/bulk-approve",
+  operationId: "bulkApproveExpenses",
+  summary: "Approve up to 20 expenses from your team in one call",
+  description: "Each expense goes through the same rule as a single approval. Refused "
+    + "ones are skipped with a reason, not fatal. Repeating the call approves nothing twice.",
+  security: asPerson,
+  request: { body: { content: { "application/json": { schema: BulkApproveRequest } } } },
+  responses: {
+    200: json("One result per id, in request order", BulkApproveResponse),
+    400: error("Empty, more than 20, or duplicate expenseIds (invalid_body)"),
+    401: unauthorized,
+    403: error("Only managers can bulk-approve (not_a_manager)"),
+  },
 });
 
 // ---- For managers and their agents ----

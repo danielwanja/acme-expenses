@@ -1,5 +1,6 @@
 import {
-  checkApproval, type Approver, type DenyReason, type Expense,
+  checkApproval, planBulkApproval, type Approver, type BulkApproveResult,
+  type DenyReason, type Expense,
 } from "@acme/shared";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import {
@@ -12,6 +13,7 @@ const DENIED: Record<DenyReason, [number, string]> = {
   cannot_self_approve: [403, "You can't approve or reject your own expense."],
   not_your_report: [403, "This expense belongs to someone outside your team."],
   not_pending: [409, "This expense isn't waiting for approval."],
+  not_found: [404, "No such expense."],
 };
 
 export function deniedError(reason: DenyReason): HttpError {
@@ -30,19 +32,20 @@ export function reportsOf(uid: string, tx?: Transaction) {
 }
 
 /** The approver and the people who report to them. */
-export async function loadApprover(tx: Transaction, uid: string): Promise<Approver> {
+export async function loadApprover(tx: Transaction | undefined, uid: string): Promise<Approver> {
   const reports = await reportsOf(uid, tx);
   return { uid, team: reports.docs.map((d) => d.id) };
 }
 
-/** The one write an approval makes. */
+/** The one write an approval makes, for single and bulk alike. */
 export function applyApproval(
-  tx: Transaction, ref: DocumentReference, approver: Approver,
+  tx: Transaction, ref: DocumentReference, approver: Approver, via: "single" | "bulk",
 ): void {
   tx.update(ref, {
     status: "approved",
     approvedBy: approver.uid,
     approvedAt: FieldValue.serverTimestamp(),
+    approvedVia: via, // documents without it were approved one at a time
   });
 }
 
@@ -54,7 +57,29 @@ export async function approveOne(user: DecodedIdToken, expenseId: string): Promi
     if (!snap.exists) throw expenseNotFound(expenseId);
     const decision = checkApproval(approver, snap.data() as Expense);
     if (!decision.ok) throw deniedError(decision.reason);
-    applyApproval(tx, ref, approver);
+    applyApproval(tx, ref, approver, "single");
+  });
+}
+
+/** One transaction: every approval in the batch lands, or none does. */
+export async function bulkApprove(
+  approver: Approver, ids: string[],
+): Promise<BulkApproveResult[]> {
+  const db = getFirestore();
+  const refs = ids.map((id) => db.doc(`expenses/${id}`));
+  return db.runTransaction(async (tx) => {
+    const snaps = await tx.getAll(...refs);
+    const found = new Map(
+      snaps.filter((s) => s.exists)
+        .map((s) => [s.id, s.data() as Expense]),
+    );
+    const results = planBulkApproval(approver, found, ids);
+    for (const r of results) {
+      if (r.outcome !== "approved") continue;
+      const ref = db.doc(`expenses/${r.expenseId}`);
+      applyApproval(tx, ref, approver, "bulk"); // same write as single
+    }
+    return results;
   });
 }
 

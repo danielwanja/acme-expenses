@@ -12,6 +12,47 @@ components:
       scheme: bearer
       description: Firebase Auth ID token of a signed-in employee or manager
   schemas:
+    BulkApproveRequest:
+      type: object
+      properties:
+        expenseIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+          maxItems: 20
+      required:
+        - expenseIds
+    BulkApproveResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              expenseId:
+                type: string
+              outcome:
+                type: string
+                enum:
+                  - approved
+                  - skipped
+              reason:
+                $ref: "#/components/schemas/DenyReason"
+            required:
+              - expenseId
+              - outcome
+      required:
+        - results
+    DenyReason:
+      type: string
+      enum:
+        - cannot_self_approve
+        - not_pending
+        - not_your_report
+        - not_found
     ApiError:
       type: object
       properties:
@@ -408,6 +449,74 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "409":
           description: Not waiting for approval (not_pending)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/expenses/bulk-approve:
+    post:
+      operationId: bulkApproveExpenses
+      summary: Approve up to 20 expenses from your team in one call
+      description: Each expense goes through the same rule as a single approval.
+        Refused ones are skipped with a reason, not fatal. Repeating the call
+        approves nothing twice.
+      security: *a1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenseIds:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                  maxItems: 20
+              required:
+                - expenseIds
+      responses:
+        "200":
+          description: One result per id, in request order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        expenseId:
+                          type: string
+                        outcome:
+                          type: string
+                          enum:
+                            - approved
+                            - skipped
+                        reason:
+                          $ref: "#/components/schemas/DenyReason"
+                      required:
+                        - expenseId
+                        - outcome
+                required:
+                  - results
+        "400":
+          description: Empty, more than 20, or duplicate expenseIds (invalid_body)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Only managers can bulk-approve (not_a_manager)
           content:
             application/json:
               schema:

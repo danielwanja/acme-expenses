@@ -3,7 +3,9 @@ import {
   useMutation, useQuery, useQueryClient,
 } from "@tanstack/react-query";
 import type { PendingQuery } from "@acme/shared";
-import { approveExpense, listPending, rejectExpense } from "../api";
+import {
+  approveExpense, bulkApprove, listPending, rejectExpense,
+} from "../api";
 
 type PendingFilter = Partial<PendingQuery>;
 
@@ -38,6 +40,16 @@ export function useReject() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       rejectExpense(id, reason),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: approvalKeys.all }),
+  });
+}
+
+/** One call for up to MAX_BULK_APPROVE; the result lists each outcome. */
+export function useBulkApprove() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: bulkApprove,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: approvalKeys.all }),
   });

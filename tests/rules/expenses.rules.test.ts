@@ -108,6 +108,13 @@ describe("changing expenses", () => {
       { status: "approved" }));
   });
 
+  test("a manager's client can't set status, approvedBy or approvedVia", async () => {
+    await seed("expenses/e1", draft("erin", { status: "submitted" }));
+    const max = testEnv.authenticatedContext("max", { role: "manager" }).firestore();
+    await assertFails(updateDoc(doc(max, "expenses/e1"),
+      { status: "approved", approvedBy: "max", approvedVia: "bulk" }));
+  });
+
   test("even the owner edits a draft through the API, not directly", async () => {
     await seed("expenses/e1", draft("erin"));
     const erin = testEnv.authenticatedContext("erin").firestore();
