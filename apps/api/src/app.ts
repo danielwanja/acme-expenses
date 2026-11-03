@@ -7,6 +7,7 @@ import { HttpError, errorHandler } from "./errors.js";
 import { approvals } from "./routes/approvals.js";
 import { expenses } from "./routes/expenses.js";
 import { fx } from "./routes/fx.js";
+import { partner } from "./routes/partner.js";
 import { settings } from "./routes/settings.js";
 import { FxError } from "./services/fx-client.js";
 
@@ -19,7 +20,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Routes start at /v1; callers use /api/v1/... (the Hosting rewrite keeps /api).
-app.use("/api", expenses, approvals, settings, fx);
+app.use("/api", expenses, approvals, partner, settings, fx);
 
 const noRoute: RequestHandler = (req, _res, next) => {
   next(new HttpError(404, "no_route", `No route for ${req.method} ${req.path}.`));

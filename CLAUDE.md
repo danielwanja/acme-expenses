@@ -11,6 +11,11 @@
 - Business rules live only in packages/shared/src/rules.
 - Every API change updates openapi.yaml and its contract tests.
 
+## API versioning
+- /v1 changes are additive only. Never rename, remove or retype a
+  field, and never change a status code's meaning.
+- Breaking changes go in a new /v2 router. Ask before starting one.
+
 ## House libraries
 - HTTP: ky, configured on the instance. No hand-written retry loops.
 - React server state: TanStack Query. No fetching in useEffect.

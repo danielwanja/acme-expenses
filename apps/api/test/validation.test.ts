@@ -29,6 +29,11 @@ test("reject needs a reason", async () => {
   expect(ApiError.parse(res.body).error.code).toBe("invalid_body");
 });
 
+test("partner routes need X-Api-Key", async () => {
+  const res = await request(app).get("/api/v1/expenses").expect(401);
+  expect(ApiError.parse(res.body).error.code).toBe("missing_api_key");
+});
+
 describe("POST /api/v1/expenses/bulk-approve", () => {
   const bulk = (token: string, body: unknown) =>
     request(app).post("/api/v1/expenses/bulk-approve")

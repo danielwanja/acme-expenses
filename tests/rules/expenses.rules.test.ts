@@ -185,6 +185,14 @@ describe("server-only data", () => {
     await assertFails(updateDoc(doc(erin, "users/erin"), { role: "manager" }));
   });
 
+  test("partner keys and idempotency records are never readable", async () => {
+    await seed("partnerKeys/abc", { partnerId: "ledgerco" });
+    await seed("idempotency/ledgerco_k1", { expenseId: "e1" });
+    const max = testEnv.authenticatedContext("max", { role: "manager" }).firestore();
+    await assertFails(getDoc(doc(max, "partnerKeys/abc")));
+    await assertFails(getDoc(doc(max, "idempotency/ledgerco_k1")));
+  });
+
   test("cached exchange rates are only for the Admin SDK", async () => {
     await seed("fxRates/2026-10-30_EUR",
       { base: "EUR", date: "2026-10-30", rates: { USD: 1.0842 } });

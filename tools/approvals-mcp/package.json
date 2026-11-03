@@ -1,0 +1,15 @@
+{
+  "name": "@acme/approvals-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local stdio MCP server: one read-only tool, approvals_list_pending",
+  "scripts": {
+    "start": "node server.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
+}

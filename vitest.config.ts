@@ -7,6 +7,7 @@ const apiEmulatorTests = [
   "test/bulk-approve.test.ts",
   "test/expenses.test.ts",
   "test/finance-approval.test.ts",
+  "test/partner.contract.test.ts",
   "test/pending.test.ts",
 ];
 
@@ -44,6 +45,13 @@ export default defineConfig({
           include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
           environment: "jsdom",
           setupFiles: ["src/test/setup.ts"],
+        },
+      },
+      {
+        test: {
+          name: "mcp",
+          root: "tools/approvals-mcp",
+          include: ["*.test.ts"],
         },
       },
       {

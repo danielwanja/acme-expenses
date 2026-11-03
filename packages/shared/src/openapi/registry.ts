@@ -7,6 +7,9 @@ import {
   DecisionResult, ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest,
 } from "../schemas/expense.js";
 import { FxRate, FxRateQuery } from "../schemas/fx.js";
+import {
+  ExpensePage, ExportHeaders, ExportResult, ListExpensesQuery,
+} from "../schemas/partner.js";
 import { PendingPage, PendingQuery } from "../schemas/pending.js";
 
 export const registry = new OpenAPIRegistry();
@@ -16,7 +19,14 @@ const bearerAuth = registry.registerComponent("securitySchemes", "bearerAuth", {
   scheme: "bearer",
   description: "Firebase Auth ID token of a signed-in employee or manager",
 });
+const partnerKey = registry.registerComponent("securitySchemes", "partnerKey", {
+  type: "apiKey",
+  in: "header",
+  name: "X-Api-Key",
+  description: "Partner API key issued by Acme",
+});
 const asPerson = [{ [bearerAuth.name]: [] }];
+const asPartner = [{ [partnerKey.name]: [] }];
 
 const json = (description: string, schema: ZodType) => ({
   description,
@@ -137,6 +147,47 @@ registry.registerPath({
     400: error("Empty, more than 20, or duplicate expenseIds (invalid_body)"),
     401: unauthorized,
     403: error("Only managers can bulk-approve (not_a_manager)"),
+  },
+});
+
+// ---- Partner API (accounting partners) ----
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/expenses",
+  operationId: "listExpenses",
+  summary: "List expenses by status, oldest approval first",
+  description: "Only approved and exported expenses are ever listed. Amounts are "
+    + "integer minor units. Pages are stable: pass nextCursor back as cursor.",
+  security: asPartner,
+  request: { query: ListExpensesQuery },
+  responses: {
+    200: { description: "One page of expenses",
+      content: { "application/json": { schema: ExpensePage } } },
+    400: { description: "Invalid query (invalid_query, invalid_cursor)",
+      content: { "application/json": { schema: ApiError } } },
+    401: { description: "Missing or invalid partner key",
+      content: { "application/json": { schema: ApiError } } },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/expenses/{id}/export",
+  operationId: "markExpenseExported",
+  summary: "Mark one approved expense as exported to your ledger",
+  description: "Safe to retry with the same Idempotency-Key: the first response is "
+    + "returned again and nothing is exported twice.",
+  security: asPartner,
+  request: { params: ExpenseIdParams, headers: ExportHeaders },
+  responses: {
+    200: json("Exported (or the stored response for a repeated key)", ExportResult),
+    400: error("Missing or malformed Idempotency-Key (missing_idempotency_key)"),
+    401: error("Missing or invalid partner key"),
+    404: error("No such expense (expense_not_found)"),
+    409: error("The expense is not approved (not_approved)"),
+    422: error("This key was already used for a different expense "
+      + "(idempotency_key_reused)"),
   },
 });
 
