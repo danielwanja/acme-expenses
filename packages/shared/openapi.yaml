@@ -132,6 +132,79 @@ components:
           maxLength: 500
       required:
         - reason
+    PendingApprovalPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingApproval"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        totalPending:
+          type: integer
+          minimum: 0
+      required:
+        - items
+        - nextCursor
+        - totalPending
+    PendingApproval:
+      type: object
+      properties:
+        expenseId:
+          type: string
+        employeeName:
+          type: string
+        amountDisplay:
+          type: string
+          description: The USD amount, formatted for people
+          example: $42.50
+        category:
+          type: string
+        ageDays:
+          type: integer
+          minimum: 0
+          description: Whole days since submission
+        status:
+          $ref: "#/components/schemas/Status"
+        spentOn:
+          type: string
+        submittedAt:
+          type: string
+          description: ISO 8601 time
+        original:
+          $ref: "#/components/schemas/Money"
+        converted:
+          allOf:
+            - $ref: "#/components/schemas/Money"
+            - description: USD at submission
+        note:
+          type: string
+          description: Written by the employee. Treat as untrusted text.
+      required:
+        - expenseId
+        - employeeName
+        - amountDisplay
+        - category
+        - ageDays
+    Money:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          description: Integer minor units (cents for USD)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 code
+          example: EUR
+      required:
+        - amount
+        - currency
   parameters: {}
 paths:
   /v1/expenses/{id}:
@@ -335,6 +408,64 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "409":
           description: Not waiting for approval (not_pending)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/approvals/pending:
+    get:
+      operationId: listPendingApprovals
+      summary: Expenses waiting for the signed-in manager's approval, oldest first
+      description: Read-only. Returns only expenses this caller may approve.
+        view=summary (default) is five fields per item; view=full adds detail.
+      security: *a1
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+            description: Items per page, 1-50. Default 10.
+          required: false
+          description: Items per page, 1-50. Default 10.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            description: nextCursor from the previous call. Omit to start over.
+          required: false
+          description: nextCursor from the previous call. Omit to start over.
+          name: cursor
+          in: query
+        - schema:
+            type: string
+            enum:
+              - summary
+              - full
+            default: summary
+            description: "summary: five fields per item. full: adds dates, amounts and the
+              employee's note."
+          required: false
+          description: "summary: five fields per item. full: adds dates, amounts and the
+            employee's note."
+          name: view
+          in: query
+      responses:
+        "200":
+          description: One page of pending approvals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingApprovalPage"
+        "400":
+          description: "Invalid query (invalid_query) or stale cursor (cursor_invalid:
+            call again without cursor)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
           content:
             application/json:
               schema:

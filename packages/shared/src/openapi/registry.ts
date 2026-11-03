@@ -4,6 +4,7 @@ import { ApiError } from "../schemas/api-error.js";
 import {
   DecisionResult, ExpenseIdParams, RejectRequest, SubmitResult, UpdateExpenseRequest,
 } from "../schemas/expense.js";
+import { PendingPage, PendingQuery } from "../schemas/pending.js";
 
 export const registry = new OpenAPIRegistry();
 
@@ -91,4 +92,23 @@ registry.registerPath({
     body: { content: { "application/json": { schema: RejectRequest } } },
   },
   ...decide("reject"),
+});
+
+// ---- For managers and their agents ----
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/approvals/pending",
+  operationId: "listPendingApprovals",
+  summary: "Expenses waiting for the signed-in manager's approval, oldest first",
+  description: "Read-only. Returns only expenses this caller may approve. "
+    + "view=summary (default) is five fields per item; view=full adds detail.",
+  security: asPerson,
+  request: { query: PendingQuery },
+  responses: {
+    200: json("One page of pending approvals", PendingPage),
+    400: error("Invalid query (invalid_query) or stale cursor (cursor_invalid: "
+      + "call again without cursor)"),
+    401: unauthorized,
+  },
 });

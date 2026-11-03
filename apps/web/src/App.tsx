@@ -18,7 +18,7 @@ export function App() {
   const canApprove = isManager || isFinance;
   let screen;
   if (path === "/expenses/new") screen = <ExpenseForm uid={user.uid} />;
-  else if (path === "/approvals" && canApprove) screen = <PendingApprovals uid={user.uid} />;
+  else if (path === "/approvals" && canApprove) screen = <PendingApprovals />;
   else screen = <ExpenseList uid={user.uid} />;
 
   return (

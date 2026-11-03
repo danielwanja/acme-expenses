@@ -2,6 +2,7 @@
 // run on Cloud Run behind a five-line server.ts.
 import express, { type ErrorRequestHandler, type RequestHandler } from "express";
 import { HttpError, errorHandler } from "./errors.js";
+import { approvals } from "./routes/approvals.js";
 import { expenses } from "./routes/expenses.js";
 
 export const app = express();
@@ -13,7 +14,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Routes start at /v1; callers use /api/v1/... (the Hosting rewrite keeps /api).
-app.use("/api", expenses);
+app.use("/api", expenses, approvals);
 
 const noRoute: RequestHandler = (req, _res, next) => {
   next(new HttpError(404, "no_route", `No route for ${req.method} ${req.path}.`));

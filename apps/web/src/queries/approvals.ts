@@ -2,18 +2,22 @@
 import {
   useMutation, useQuery, useQueryClient,
 } from "@tanstack/react-query";
-import { approveExpense, rejectExpense } from "../api";
-import { listTeamPending } from "../expenses";
+import type { PendingQuery } from "@acme/shared";
+import { approveExpense, listPending, rejectExpense } from "../api";
+
+type PendingFilter = Partial<PendingQuery>;
 
 export const approvalKeys = {
   all: ["approvals"] as const,
-  pending: (uid: string) => [...approvalKeys.all, "pending", uid] as const,
+  pending: (query: PendingFilter) =>
+    [...approvalKeys.all, "pending", query] as const,
 };
 
-export function usePendingApprovals(uid: string) {
+/** The task-shaped endpoint: only what this user may approve. */
+export function usePendingApprovals(query: PendingFilter) {
   return useQuery({
-    queryKey: approvalKeys.pending(uid),
-    queryFn: () => listTeamPending(uid),
+    queryKey: approvalKeys.pending(query),
+    queryFn: ({ signal }) => listPending(query, signal),
   });
 }
 

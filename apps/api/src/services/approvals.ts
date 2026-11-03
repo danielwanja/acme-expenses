@@ -23,10 +23,15 @@ export function expenseNotFound(id: string): HttpError {
   return new HttpError(404, "expense_not_found", `No expense with id ${id}.`);
 }
 
-/** The approver and the people who report to them (users.managerId). */
+/** The users who report to `uid` (users.managerId), read in `tx` if given. */
+export function reportsOf(uid: string, tx?: Transaction) {
+  const q = getFirestore().collection("users").where("managerId", "==", uid);
+  return tx ? tx.get(q) : q.get();
+}
+
+/** The approver and the people who report to them. */
 export async function loadApprover(tx: Transaction, uid: string): Promise<Approver> {
-  const reports = await tx.get(
-    getFirestore().collection("users").where("managerId", "==", uid));
+  const reports = await reportsOf(uid, tx);
   return { uid, team: reports.docs.map((d) => d.id) };
 }
 

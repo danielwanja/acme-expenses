@@ -1,5 +1,7 @@
 // Calls to Acme's own API. Every response is parsed with the shared schema.
-import { DecisionResult, SubmitResult } from "@acme/shared";
+import {
+  DecisionResult, PendingPage, SubmitResult, type PendingQuery,
+} from "@acme/shared";
 import { http } from "./http";
 
 export { ApiCallError } from "./http";
@@ -13,3 +15,8 @@ export const approveExpense = (id: string) =>
 export const rejectExpense = (id: string, reason: string) =>
   http.post(`v1/expenses/${id}/reject`, { json: { reason } })
     .json(DecisionResult);
+
+export const listPending = (
+  query: Partial<PendingQuery> = {}, signal?: AbortSignal,
+) => http.get("v1/approvals/pending", { searchParams: query, signal })
+  .json(PendingPage);

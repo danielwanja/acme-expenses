@@ -1,12 +1,12 @@
-import { formatMoney } from "@acme/shared";
 import { useState } from "react";
 import { ApiCallError } from "../api";
 import {
   useApprove, usePendingApprovals, useReject,
 } from "../queries/approvals";
 
-export function PendingApprovals({ uid }: { uid: string }) {
-  const pending = usePendingApprovals(uid);
+export function PendingApprovals() {
+  // One call to the task-shaped endpoint: only what this user may approve.
+  const pending = usePendingApprovals({ view: "full", limit: 50 });
   const approve = useApprove();
   const reject = useReject();
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function PendingApprovals({ uid }: { uid: string }) {
 
   if (pending.isPending) return <p>Loading approvals…</p>;
   if (pending.isError) return <p role="alert">Couldn't load approvals.</p>;
-  const rows = pending.data;
+  const rows = pending.data.items;
   if (rows.length === 0) return <p>Nothing is waiting for you.</p>;
 
   return (
@@ -40,26 +40,27 @@ export function PendingApprovals({ uid }: { uid: string }) {
         </thead>
         <tbody>
           {rows.map((e) => (
-            <tr key={e.id}>
+            <tr key={e.expenseId}>
               <td>{e.employeeName}</td>
               <td>{e.category}</td>
-              <td>{formatMoney({ amount: e.amountBase ?? e.amount, currency: "USD" })}</td>
+              <td>{e.amountDisplay}</td>
               <td>
                 <button type="button"
-                  onClick={() => void act(() => approve.mutateAsync(e.id))}>
+                  onClick={() => void act(() => approve.mutateAsync(e.expenseId))}>
                   Approve
                 </button>
-                {rejecting === e.id ? (
+                {rejecting === e.expenseId ? (
                   <>
                     <label>Reason<input value={reason}
                       onChange={(ev) => setReason(ev.target.value)} /></label>
                     <button type="button" disabled={!reason.trim()}
-                      onClick={() => void act(() => reject.mutateAsync({ id: e.id, reason }))}>
+                      onClick={() => void act(() =>
+                        reject.mutateAsync({ id: e.expenseId, reason }))}>
                       Reject expense
                     </button>
                   </>
                 ) : (
-                  <button type="button" onClick={() => setRejecting(e.id)}>Reject</button>
+                  <button type="button" onClick={() => setRejecting(e.expenseId)}>Reject</button>
                 )}
               </td>
             </tr>

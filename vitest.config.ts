@@ -5,6 +5,7 @@ import { defineConfig } from "vitest/config";
 const apiEmulatorTests = [
   "test/approve.test.ts",
   "test/expenses.test.ts",
+  "test/pending.test.ts",
 ];
 
 export default defineConfig({
