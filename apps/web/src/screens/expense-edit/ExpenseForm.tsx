@@ -1,5 +1,5 @@
 import {
-  CATEGORIES, formatMoney, isReceiptRequired, NewExpense, parseAmountInput,
+  CATEGORIES, formatMoney, NewExpense, parseAmountInput,
   RECEIPT_REQUIRED_ABOVE_CENTS, type Category,
 } from "@acme/shared";
 import { useState, type FormEvent } from "react";
@@ -24,7 +24,7 @@ export function ExpenseForm({ uid }: { uid: string }) {
 
   const amount = parseAmountInput(amountText, currency);
   // The hint explains the rule; the API enforces it on the converted amount.
-  const receiptHint = currency === "USD" && amount !== null && isReceiptRequired(amount)
+  const receiptHint = currency === "USD" && amount !== null && amount >= 7500
     && !receipt;
 
   async function save(andSubmit: boolean) {
