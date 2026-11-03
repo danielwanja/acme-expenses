@@ -1,0 +1,1 @@
+/goal docs/briefs/finance-dashboard.md is built: every entry in docs/briefs/finance-dashboard.features.json is "passes": true, shown by printing the file; npm run typecheck, lint, test, test:emu and test:e2e exit 0 with output shown; no file under packages/shared/src/rules changed; or stop after 150 turns

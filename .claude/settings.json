@@ -16,6 +16,11 @@
     ]
   },
   "hooks": {
+    "SessionStart": [{
+      "matcher": "compact",
+      "hooks": [{ "type": "command", "command":
+        "cat \"$CLAUDE_PROJECT_DIR\"/PROGRESS.md 2>/dev/null || true" }]
+    }],
     "Stop": [{
       "hooks": [
         { "type": "command", "command": "npm test --silent 1>&2 || exit 2" }
