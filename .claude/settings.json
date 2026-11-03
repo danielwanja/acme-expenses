@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Bash(npm run *)", "Bash(git commit *)"],
+    "ask": ["mcp__firebase"],
+    "deny": ["Bash(git push *)", "Read(./.env)", "Read(./.env.*)"]
+  }
+}

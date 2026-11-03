@@ -1,0 +1,30 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1d2330;
+  background: #f6f7f9;
+  line-height: 1.4;
+}
+body { margin: 0; }
+header {
+  display: flex; gap: 1.5rem; align-items: center;
+  padding: 0.75rem 1.5rem; background: #1d2330; color: #fff;
+}
+header nav { display: flex; gap: 1rem; flex: 1; }
+header a { color: #cfe0ff; }
+.who { opacity: 0.8; font-size: 0.9rem; }
+main { max-width: 60rem; margin: 2rem auto; padding: 0 1.5rem; }
+.card {
+  display: grid; gap: 0.75rem; max-width: 28rem; padding: 1.5rem;
+  background: #fff; border-radius: 8px; box-shadow: 0 1px 3px #0002;
+}
+label { display: grid; gap: 0.25rem; font-weight: 600; }
+input, select, textarea, button { font: inherit; padding: 0.4rem 0.6rem; }
+.actions { display: flex; gap: 0.5rem; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+caption { text-align: left; font-weight: 700; padding: 0.5rem 0; }
+th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #e3e6eb; }
+.badge { padding: 0.1rem 0.5rem; border-radius: 999px; background: #e3e6eb; }
+.badge-approved { background: #d4f5dd; }
+.badge-rejected { background: #fbd9d9; }
+[role="alert"] { color: #a11; }
+.hint { color: #555; font-size: 0.9rem; }

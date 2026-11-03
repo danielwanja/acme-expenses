@@ -1,0 +1,34 @@
+{
+  "name": "acme-expenses",
+  "private": true,
+  "type": "module",
+  "description": "Companion code for Coding with Claude: A Developer's Playbook",
+  "engines": {
+    "node": ">=24.12"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @acme/api && firebase emulators:exec --project demo-acme --ui \"npm run dev -w @acme/web\"",
+    "build": "npm run build -w @acme/api && npm run build -w @acme/web",
+    "openapi": "npm run openapi -w @acme/shared",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "vitest run --project shared --project api --project web",
+    "test:emu": "firebase emulators:exec --only auth,firestore --project demo-acme \"vitest run --project api-emu\"",
+    "test:e2e": "npm run test:e2e -w @acme/web --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.14.0",
+    "firebase-tools": "^15.34.2",
+    "globals": "^17.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
+  }
+}

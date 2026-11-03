@@ -1,0 +1,25 @@
+node_modules/
+dist/
+apps/api/lib/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+.emulator-data/
+
+# Secrets and local overrides (never commit)
+.env.local
+.secret.local
+apps/api/.secret.local
+apps/api/.env.local
+
+# Claude Code: personal files
+CLAUDE.local.md
+.claude/settings.local.json

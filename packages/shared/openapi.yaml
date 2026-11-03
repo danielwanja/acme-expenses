@@ -1,0 +1,333 @@
+# Generated from the Zod schemas by `npm run openapi`. Don't edit.
+openapi: 3.1.0
+info:
+  title: Acme Expenses API
+  version: 1.0.0
+servers:
+  - url: /api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Firebase Auth ID token of a signed-in employee or manager
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: invalid_query
+            message:
+              type: string
+            hint:
+              type: string
+              description: What to do next
+            requestId:
+              type: string
+          required:
+            - code
+            - message
+            - requestId
+      required:
+        - error
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          description: ISO 4217 code
+          example: EUR
+        category:
+          $ref: "#/components/schemas/Category"
+        spentOn:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          example: 2026-10-14
+        note:
+          type: string
+          maxLength: 500
+        receiptPath:
+          type:
+            - string
+            - "null"
+          minLength: 1
+    Category:
+      type: string
+      enum:
+        - Meals
+        - Travel
+        - Lodging
+        - Supplies
+        - Other
+    SubmitResult:
+      type: object
+      properties:
+        expenseId:
+          type: string
+        status:
+          type: string
+          enum:
+            - submitted
+        amountBase:
+          type: integer
+          minimum: 0
+          description: USD cents
+        baseCurrency:
+          type: string
+          enum:
+            - USD
+        fxRate:
+          type: number
+          exclusiveMinimum: 0
+        fxRateDate:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          example: 2026-10-14
+      required:
+        - expenseId
+        - status
+        - amountBase
+        - baseCurrency
+        - fxRate
+        - fxRateDate
+    DecisionResult:
+      type: object
+      properties:
+        expenseId:
+          type: string
+        status:
+          $ref: "#/components/schemas/Status"
+      required:
+        - expenseId
+        - status
+    Status:
+      type: string
+      enum:
+        - draft
+        - submitted
+        - approved
+        - rejected
+        - exported
+    RejectRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - reason
+  parameters: {}
+paths:
+  /v1/expenses/{id}:
+    patch:
+      operationId: updateExpense
+      summary: Edit your own draft expense. Only drafts can be edited.
+      security: &a1
+        - bearerAuth: []
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpenseRequest"
+      responses:
+        "204":
+          description: Draft updated
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Not your expense (not_owner)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No such expense (expense_not_found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: The expense is not a draft (not_draft)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/expenses/{id}/submit:
+    post:
+      operationId: submitExpense
+      summary: Submit your own draft for approval. Converts the amount to USD.
+      security: *a1
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Submitted, with the USD amount and the rate used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitResult"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Not your expense (not_owner)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No such expense (expense_not_found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: The expense is not a draft (not_draft)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: The draft can't be submitted as it is (unsupported_currency)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/expenses/{id}/approve:
+    post:
+      operationId: approveExpense
+      summary: Approve an expense from someone on your team
+      security: *a1
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: The expense after you approve it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionResult"
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Not allowed: cannot_self_approve or not_your_report"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No such expense (expense_not_found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Not waiting for approval (not_pending)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/expenses/{id}/reject:
+    post:
+      operationId: rejectExpense
+      summary: Reject an expense from someone on your team, with a reason
+      security: *a1
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectRequest"
+      responses:
+        "200":
+          description: The expense after you reject it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionResult"
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Missing or invalid ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Not allowed: cannot_self_approve or not_your_report"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No such expense (expense_not_found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Not waiting for approval (not_pending)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+webhooks: {}

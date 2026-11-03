@@ -1,0 +1,37 @@
+rules_version = '2';
+// Client access only. The API uses the Admin SDK, which bypasses these rules,
+// so every status change goes through the API and its shared business rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isManager() {
+      return signedIn() && request.auth.token.role == "manager";
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isManager());
+      allow write: if false; // admin tooling only
+    }
+
+    match /expenses/{id} {
+      // An employee creates their own draft. Server-owned fields
+      // (amountBase, fxRate, createdAt, approvals...) can't be sent.
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == "draft"
+        && request.resource.data.keys().hasOnly([
+             "ownerId", "amount", "currency", "category", "spentOn",
+             "note", "receiptPath", "status"])
+        && request.resource.data.amount is int
+        && request.resource.data.amount >= 0
+        && request.resource.data.currency is string
+        && request.resource.data.currency.size() == 3;
+      allow read: if signedIn()
+        && (resource.data.ownerId == request.auth.uid
+            || request.auth.token.role == "manager");
+      allow update, delete: if false; // edits and approvals go through the API
+    }
+  }
+}
